@@ -1,0 +1,44 @@
+{
+  "name": "SIPILAH — Sistem Pembelajaran KKA Pilah Sampah Sekolah",
+  "short_name": "SIPILAH",
+  "description": "Media ajar Kecerdasan Artifisial untuk SMP: belajar dataset, label, klasifikasi gambar, akurasi, dan computational thinking melalui aksi pilah sampah sekolah. Web offline-first.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fafbf7",
+  "theme_color": "#15803d",
+  "lang": "id-ID",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dataset Sampah",
+      "url": "./index.html#dataset",
+      "description": "Kumpulkan foto sampah"
+    },
+    {
+      "name": "Latih Model",
+      "url": "./index.html#train",
+      "description": "Latih kecerdasan artifisial"
+    },
+    {
+      "name": "Uji Model",
+      "url": "./index.html#test",
+      "description": "Uji prediksi dengan foto baru"
+    }
+  ]
+}

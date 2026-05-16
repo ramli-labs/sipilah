@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>SIPILAH — Sistem Pembelajaran KKA & Pemilahan Sampah Sekolah</title>
+  <meta name="description" content="Media ajar KKA untuk SMP: belajar dataset, label, klasifikasi gambar, akurasi, dan computational thinking lewat aksi pilah sampah sekolah. Berbasis web offline."/>
+
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#15803d"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="SIPILAH"/>
+  <link rel="apple-touch-icon" href="icon-192.svg"/>
+  <link rel="icon" type="image/svg+xml" href="icon-192.svg"/>
+
+  <!-- Local CSS (no Google Fonts, no Tailwind CDN runtime) -->
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div id="root">
+    <!-- First-paint loader, dihapus oleh React saat mount -->
+    <div style="min-height:100vh;display:grid;place-items:center;background:#fafbf7;color:#15803d;font-family:system-ui,sans-serif">
+      <div style="text-align:center">
+        <div style="font-size:48px;margin-bottom:8px">&#9851;</div>
+        <div style="font-weight:700;font-size:18px">SIPILAH</div>
+        <div style="color:#64748b;font-size:14px;margin-top:4px">Memuat aplikasi…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App bundle (React + TF.js + MobileNet loader + app, semua minified) -->
+  <script src="bundle.js" defer></script>
+
+  <!-- PWA registration -->
+  <script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(
+          (reg) => console.log('[SW] Terdaftar:', reg.scope),
+          (err) => console.warn('[SW] Gagal daftar:', err)
+        );
+      });
+    }
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      window.__sipilahInstallReady = true;
+      window.dispatchEvent(new CustomEvent('sipilah-install-ready'));
+    });
+    window.__sipilahInstall = async () => {
+      if (!deferredInstallPrompt) return false;
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      window.__sipilahInstallReady = false;
+      return choice?.outcome === 'accepted';
+    };
+  </script>
+</body>
+</html>

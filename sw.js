@@ -1,18 +1,22 @@
-/* SIPILAH — Service Worker v3 production
+/* SIPILAH — Service Worker v13 production
  * Strategy: cache-first untuk semua asset lokal.
- * Bobot MobileNet di-fetch sekali saat online pertama, lalu di-cache di runtime.
+ * Bobot MobileNet lokal ikut dipre-cache agar demo offline tidak bergantung
+ * pada fetch pertama saat "Latih Model" dibuka.
  */
 
-const CACHE_NAME = 'sipilah-v3-prod-2026';
+const CACHE_NAME = 'sipilah-v13-prod-2026';
 
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './bundle.js',
+  './bundle.js?v=peta-indonesia-rapi-20260516',
+  './sipilah-3t-map.js?v=peta-indonesia-rapi-20260516',
   './style.css',
   './icon-192.svg',
   './icon-512.svg',
+  './mobilenet/model.json',
+  './mobilenet/group1-shard1of1.bin',
 ];
 
 /* Domain bobot MobileNet — di-cache otomatis saat pertama kali di-fetch */
@@ -69,11 +73,16 @@ self.addEventListener('message', event => {
   if (event.data?.type === 'PREFETCH_URLS' && Array.isArray(event.data.urls)) {
     event.waitUntil((async () => {
       const cache = await caches.open(CACHE_NAME);
-      await Promise.all(event.data.urls.map(u =>
-        fetch(u, { mode: 'no-cors' })
-          .then(res => cache.put(u, res))
-          .catch(() => null)
-      ));
+      await Promise.all(event.data.urls.map(async u => {
+        try {
+          const url = new URL(u, self.location.href);
+          const sameOrigin = url.origin === self.location.origin;
+          const res = await fetch(url.href, sameOrigin ? {} : { mode: 'no-cors' });
+          await cache.put(url.href, res);
+        } catch {
+          return null;
+        }
+      }));
     })());
   }
 });

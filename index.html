@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>SIPILAH — Sistem Pembelajaran KKA & Pemilahan Sampah Sekolah</title>
   <meta name="description" content="Media ajar KKA untuk SMP: belajar dataset, label, klasifikasi gambar, akurasi, dan computational thinking lewat aksi pilah sampah sekolah. Berbasis web offline."/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
 
   <link rel="manifest" href="manifest.json"/>
   <meta name="theme-color" content="#15803d"/>
@@ -30,13 +33,14 @@
   </div>
 
   <!-- App bundle (React + TF.js + MobileNet loader + app, semua minified) -->
-  <script src="bundle.js" defer></script>
+  <script src="bundle.js?v=peta-indonesia-rapi-20260516" defer></script>
+  <script src="sipilah-3t-map.js?v=peta-indonesia-rapi-20260516" defer></script>
 
   <!-- PWA registration -->
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then(
+        navigator.serviceWorker.register('sw.js?v=peta-indonesia-rapi-20260516').then(
           (reg) => console.log('[SW] Terdaftar:', reg.scope),
           (err) => console.warn('[SW] Gagal daftar:', err)
         );

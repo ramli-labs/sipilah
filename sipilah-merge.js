@@ -131,6 +131,82 @@
     });
   }
 
+  async function clearRuntimeCache() {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+
+    if ("caches" in window) {
+      const names = await caches.keys();
+      await Promise.all(names.map((name) => caches.delete(name)));
+    }
+  }
+
+  async function reloadLatestVersion() {
+    const ok = confirm(
+      "Muat ulang versi terbaru SIPILAH?\n\nCache aplikasi akan dibersihkan, tetapi dataset, hasil tes, dan model lokal tidak dihapus."
+    );
+    if (!ok) return;
+
+    try {
+      await clearRuntimeCache();
+      location.reload();
+    } catch {
+      alert("Cache gagal dibersihkan otomatis. Halaman akan tetap dimuat ulang.");
+      location.reload();
+    }
+  }
+
+  async function resetProjectData() {
+    const ok = confirm(
+      "Reset semua data proyek di perangkat ini?\n\nYang akan dihapus: dataset foto, model AI, hasil Pre/Post-Test, riwayat prediksi, laporan lokal, dan dashboard kontribusi.\n\nIdentitas siswa/kelompok tetap disimpan. Tindakan ini tidak bisa dibatalkan."
+    );
+    if (!ok) return;
+
+    const doubleCheck = confirm(
+      "Konfirmasi terakhir: benar-benar hapus semua data proyek SIPILAH di perangkat ini?"
+    );
+    if (!doubleCheck) return;
+
+    try {
+      if (window.SipDB && typeof window.SipDB.clearAll === "function") {
+        await window.SipDB.clearAll();
+      }
+    } catch {
+      // Continue with local reset even if IndexedDB clear fails.
+    }
+
+    try {
+      if (window.SipML && typeof window.SipML.deleteModel === "function") {
+        await window.SipML.deleteModel();
+      }
+    } catch {
+      // Continue with local reset even if model deletion fails.
+    }
+
+    [
+      "sipilah_project_v1",
+      "sipilah_tests_v1",
+      "sipilah_merge_contributions_v1",
+    ].forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // Ignore storage errors during reset.
+      }
+    });
+
+    try {
+      await clearRuntimeCache();
+    } catch {
+      // Reset data is more important than cache cleanup.
+    }
+
+    alert("Data proyek di perangkat ini sudah direset. SIPILAH akan dimuat ulang.");
+    location.reload();
+  }
+
   async function exportDataset() {
     if (!window.SipDB) {
       alert("Database SIPILAH belum siap. Muat ulang halaman lalu coba lagi.");
@@ -250,6 +326,8 @@
     style.id = "sipilah-merge-style";
     style.textContent = `
       .sip-merge-card{margin-top:18px;border:1px solid #bbf7d0;background:linear-gradient(135deg,#f0fdf4,#f0f9ff);border-radius:22px;padding:18px;box-shadow:0 18px 45px -30px rgba(21,128,61,.35)}
+      .sip-merge-page{display:flex;flex-direction:column;gap:18px}
+      .sip-merge-hero{border:1px solid #bbf7d0;background:linear-gradient(135deg,#f0fdf4,#ffffff 54%,#f0f9ff);border-radius:24px;padding:24px;box-shadow:0 22px 60px -38px rgba(21,128,61,.45)}
       .sip-merge-row{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
       .sip-merge-eyebrow{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#15803d}
       .sip-merge-title{margin-top:4px;font-size:20px;line-height:1.15;font-weight:900;color:#0f172a}
@@ -278,8 +356,12 @@
       .sip-merge-bar{border-radius:8px;padding:5px 6px;text-align:center;color:#fff;font-weight:900;font-size:11px}
       .sip-merge-empty{border:1px dashed #cbd5e1;border-radius:14px;padding:14px;color:#64748b;font-size:13px;background:#f8fafc}
       .sip-merge-reset{border:0;background:transparent;color:#64748b;font-weight:800;font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+      .sip-merge-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+      .sip-merge-panel{border:1px solid #e2e8f0;background:#fff;border-radius:20px;padding:16px}
+      .sip-merge-panel-title{font-weight:900;color:#0f172a;margin-bottom:6px}
+      .sip-merge-panel-text{font-size:13px;color:#64748b;line-height:1.55}
       @media(max-width:720px){.sip-merge-flow{grid-template-columns:1fr}.sip-merge-actions{width:100%}.sip-merge-btn{flex:1}}
-      @media(max-width:720px){.sip-merge-table th:nth-child(2),.sip-merge-table td:nth-child(2){display:none}.sip-merge-bars{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:720px){.sip-merge-table th:nth-child(2),.sip-merge-table td:nth-child(2){display:none}.sip-merge-bars{grid-template-columns:repeat(2,minmax(0,1fr))}.sip-merge-grid{grid-template-columns:1fr}}
     `;
     document.head.appendChild(style);
   }
@@ -411,6 +493,8 @@
       if (!(target instanceof HTMLElement)) return;
       if (target.matches("[data-sip-merge-export]")) exportDataset();
       if (target.matches("[data-sip-merge-import]")) importDataset();
+      if (target.matches("[data-sip-reload-latest]")) reloadLatestVersion();
+      if (target.matches("[data-sip-reset-project]")) resetProjectData();
       if (target.matches("[data-sip-merge-reset]")) {
         if (confirm("Hapus riwayat kontribusi dashboard? Dataset foto tidak ikut terhapus.")) {
           writeContributions([]);
@@ -423,13 +507,91 @@
     container.appendChild(card);
   }
 
-  function init() {
-    injectMergeCard();
-    const observer = new MutationObserver(injectMergeCard);
-    observer.observe(document.body, { childList: true, subtree: true });
+  function PageCollaboration() {
+    const React = window.React;
+    const [version, setVersion] = React.useState(0);
+
+    React.useEffect(() => {
+      injectStyles();
+    }, []);
+
+    const refresh = () => setVersion((value) => value + 1);
+    const handleClick = async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.matches("[data-sip-merge-export]")) {
+        await exportDataset();
+        refresh();
+      }
+      if (target.matches("[data-sip-merge-import]")) await importDataset();
+      if (target.matches("[data-sip-merge-reset]")) {
+        if (confirm("Hapus riwayat kontribusi dashboard? Dataset foto tidak ikut terhapus.")) {
+          writeContributions([]);
+          refresh();
+        }
+      }
+    };
+
+    return React.createElement(
+      "div",
+      { className: "sip-merge-page", onClick: handleClick, "data-sip-merge-version": version },
+      React.createElement(
+        "section",
+        { className: "sip-merge-hero" },
+        React.createElement(
+          "div",
+          { className: "sip-merge-row" },
+          React.createElement(
+            "div",
+            null,
+            React.createElement("div", { className: "sip-merge-eyebrow" }, "Kolaborasi Kelas"),
+            React.createElement("div", { className: "sip-merge-title" }, "Gabungkan dataset antar kelompok dalam satu perangkat pusat"),
+            React.createElement(
+              "div",
+              { className: "sip-merge-desc" },
+              "Setiap kelompok mengumpulkan foto sampah di perangkat masing-masing. Ketua/guru mengimpor paket dataset, lalu melatih ulang AI memakai data gabungan kelas."
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "sip-merge-actions" },
+            React.createElement("button", { type: "button", className: "sip-merge-btn secondary", "data-sip-merge-export": true }, "Ekspor Paket"),
+            React.createElement("button", { type: "button", className: "sip-merge-btn primary", "data-sip-merge-import": true }, "Import & Gabungkan")
+          )
+        ),
+        React.createElement(
+          "div",
+          { className: "sip-merge-flow" },
+          React.createElement("div", { className: "sip-merge-step" }, React.createElement("b", null, "1. Anggota"), "Kumpulkan foto kategori plastik, kertas, organik, dan residu di perangkat masing-masing."),
+          React.createElement("div", { className: "sip-merge-step" }, React.createElement("b", null, "2. Kirim Paket"), "Klik Ekspor Paket, lalu bagikan file .json lewat WhatsApp, Nearby Share, AirDrop, USB, atau Drive."),
+          React.createElement("div", { className: "sip-merge-step" }, React.createElement("b", null, "3. Perangkat Pusat"), "Klik Import & Gabungkan, cek dashboard kontribusi, lalu latih ulang AI dari dataset kelas.")
+        )
+      ),
+      React.createElement(
+        "div",
+        { className: "sip-merge-grid" },
+        React.createElement(
+          "div",
+          { className: "sip-merge-panel" },
+          React.createElement("div", { className: "sip-merge-panel-title" }, "Untuk demonstrasi lomba"),
+          React.createElement("div", { className: "sip-merge-panel-text" }, "Gunakan 2-3 perangkat siswa. Tiap perangkat mengumpulkan dataset kecil, lalu perangkat pusat menggabungkan semuanya di depan juri.")
+        ),
+        React.createElement(
+          "div",
+          { className: "sip-merge-panel" },
+          React.createElement("div", { className: "sip-merge-panel-title" }, "Untuk kelas sungguhan"),
+          React.createElement("div", { className: "sip-merge-panel-text" }, "Setelah dataset kelas terkumpul, siswa dapat membandingkan kontribusi kelompok dan melihat apakah kategori sampah sudah seimbang.")
+        )
+      ),
+      React.createElement("div", { dangerouslySetInnerHTML: { __html: renderDashboard() } })
+    );
   }
 
-  window.SipMerge = { exportDataset, importDataset };
+  function init() {
+    injectStyles();
+  }
+
+  window.SipMerge = { exportDataset, importDataset, reloadLatestVersion, resetProjectData, PageCollaboration };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

@@ -1,16 +1,16 @@
 (function () {
   const MARKERS = [
-    { name: "SMPN Mentawai", region: "Kepulauan Mentawai", x: 255, y: 366, type: "Kepulauan", side: "left" },
-    { name: "SMPN Natuna", region: "Natuna", x: 548, y: 232, type: "Perbatasan", side: "top" },
-    { name: "SMPN 3 Tarakan", region: "Kalimantan Utara", x: 918, y: 274, type: "Perbatasan", side: "top" },
-    { name: "SMP Tana Toraja", region: "Sulawesi Selatan", x: 1072, y: 476, type: "Pegunungan", side: "right" },
-    { name: "SMPN Ende", region: "Flores", x: 1068, y: 650, type: "Kepulauan", side: "bottom" },
-    { name: "SMPN Manggarai Barat", region: "Flores", x: 1016, y: 640, type: "Kepulauan", side: "bottom" },
-    { name: "SMPN Atambua", region: "Timor perbatasan", x: 1182, y: 688, type: "Perbatasan", side: "bottom" },
-    { name: "SMP Banda Naira", region: "Maluku Tengah", x: 1310, y: 435, type: "Kepulauan", side: "right" },
-    { name: "SMPN Saumlaki", region: "Kepulauan Tanimbar", x: 1402, y: 684, type: "Kepulauan", side: "bottom" },
-    { name: "SMPN 1 Sorong", region: "Papua Barat Daya", x: 1528, y: 422, type: "Indonesia Timur", side: "top" },
-    { name: "SMPN 2 Wamena", region: "Papua Pegunungan", x: 1710, y: 525, type: "Pegunungan", side: "right" }
+    { name: "Kepulauan Mentawai", region: "Kepulauan Mentawai", x: 255, y: 366, type: "Kepulauan", side: "left" },
+    { name: "Kab. Natuna", region: "Natuna", x: 548, y: 232, type: "Perbatasan", side: "top" },
+    { name: "Kalimantan Utara", region: "Kalimantan Utara", x: 918, y: 274, type: "Perbatasan", side: "top" },
+    { name: "Tana Toraja", region: "Tana Toraja", x: 1072, y: 476, type: "Pegunungan", side: "right" },
+    { name: "Kab. Ende", region: "Ende, NTT", x: 1068, y: 650, type: "Kepulauan", side: "bottom" },
+    { name: "Manggarai Barat", region: "Manggarai Barat", x: 1016, y: 640, type: "Kepulauan", side: "bottom" },
+    { name: "Kab. Belu (Atambua)", region: "Belu, NTT", x: 1182, y: 688, type: "Perbatasan", side: "bottom" },
+    { name: "Banda Naira", region: "Maluku Tengah", x: 1310, y: 435, type: "Kepulauan", side: "right" },
+    { name: "Kep. Tanimbar", region: "Kepulauan Tanimbar", x: 1402, y: 684, type: "Kepulauan", side: "bottom" },
+    { name: "Kota Sorong", region: "Papua Barat Daya", x: 1528, y: 422, type: "Indonesia Timur", side: "top" },
+    { name: "Kab. Jayawijaya (Wamena)", region: "Papua Pegunungan", x: 1710, y: 525, type: "Pegunungan", side: "right" }
   ];
 
   const css = `
@@ -64,11 +64,11 @@
     const labelY = marker.side === "top" ? marker.y - 14 : marker.side === "bottom" ? marker.y + 24 : marker.y + 4;
     const labelX = marker.side === "left" ? marker.x - 116 : marker.side === "right" ? marker.x + 14 : marker.x - 20;
     return `
-      <g tabindex="0" aria-label="${marker.name}, ${marker.region}">
-        <title>${marker.name} - ${marker.region} (${marker.type})</title>
+      <g tabindex="0" aria-label="${marker.name}">
+        <title>${marker.name} (${marker.type})</title>
         <circle class="sip-3t-pin" cx="${marker.x}" cy="${marker.y}" r="15"/>
         <circle class="sip-3t-pin-core" cx="${marker.x}" cy="${marker.y}" r="5.5"/>
-        <text class="sip-3t-label" x="${labelX}" y="${labelY}">${marker.region}</text>
+        <text class="sip-3t-label" x="${labelX}" y="${labelY}">${marker.name}</text>
       </g>
     `;
   }
@@ -103,7 +103,7 @@
             ${MARKERS.map((m) => `
               <div class="sip-3t-school">
                 <span class="sip-3t-dot"></span>
-                <span><b>${m.name}</b><small>${m.region} - ${m.type}</small></span>
+                <span><b>${m.name}</b><small>${m.type}</small></span>
               </div>
             `).join("")}
           </div>

@@ -1,17 +1,18 @@
-/* SIPILAH — Service Worker v13 production
+/* SIPILAH — Service Worker v14 production
  * Strategy: cache-first untuk semua asset lokal.
  * Bobot MobileNet lokal ikut dipre-cache agar demo offline tidak bergantung
  * pada fetch pertama saat "Latih Model" dibuka.
  */
 
-const CACHE_NAME = 'sipilah-v13-prod-2026';
+const CACHE_NAME = 'sipilah-v18-prod-2026';
 
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './bundle.js?v=peta-indonesia-rapi-20260516',
-  './sipilah-3t-map.js?v=peta-indonesia-rapi-20260516',
+  './bundle.js?v=pedagogy-layer-20260517',
+  './sipilah-3t-map.js?v=pedagogy-layer-20260517',
+  './peta-indonesia-persis.svg',
   './style.css',
   './icon-192.svg',
   './icon-512.svg',

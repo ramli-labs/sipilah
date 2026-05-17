@@ -4,7 +4,8 @@
       "Bash(python3 -c ' *)",
       "Bash(node -e ' *)",
       "Bash(node --check /workspaces/sipilah/js/bundle.js)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(node --check /workspaces/sipilah/js/sipilah-showcase.js)"
     ]
   }
 }

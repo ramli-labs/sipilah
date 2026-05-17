@@ -182,9 +182,258 @@
     document.head.appendChild(style);
   }
 
+  function renderCertificate() {
+    const metrics = getMetrics();
+    const identity = metrics.identity || {};
+    const group = (identity.group || "").trim();
+    const name = (identity.name || "").trim();
+    const role = identity.role || "Siswa";
+    const kelas = (identity.kelas || "").trim();
+    const school = (identity.school || "").trim();
+    const date = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+
+    const recipient = group ? `Kelompok ${group}` : (name || "Peserta SIPILAH");
+    const subLine = group && name ? `${name} &nbsp;·&nbsp; ${role}` : "";
+    const schoolLine = [kelas ? `Kelas ${kelas}` : "", school].filter(Boolean).join(" &nbsp;·&nbsp; ");
+    const gainText = metrics.gain != null ? `${metrics.gain >= 0 ? "+" : ""}${metrics.gain} poin` : "—";
+    const prePost = metrics.pre != null && metrics.post != null ? `${metrics.pre} → ${metrics.post}` : "—";
+    const accuracy = metrics.modelAccuracy ? `${Math.round(metrics.modelAccuracy * 100)}%` : (metrics.modelReady ? "Selesai" : "—");
+
+    if (document.getElementById("sip-cert-modal")) return;
+
+    const style = document.createElement("style");
+    style.id = "sip-cert-style";
+    style.textContent = `
+      #sip-cert-modal{position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.65);backdrop-filter:blur(10px);font-family:system-ui,-apple-system,sans-serif;padding:16px}
+      .sip-cert-wrap{position:relative;background:#fff;border-radius:20px;box-shadow:0 40px 100px -30px rgba(15,23,42,.7);max-width:720px;width:100%;overflow:hidden}
+      .sip-cert-close{position:absolute;right:12px;top:12px;z-index:2;border:1px solid #e2e8f0;background:#fff;border-radius:10px;width:34px;height:34px;font-size:22px;line-height:1;cursor:pointer;color:#64748b}
+      .sip-cert-actions{display:flex;gap:10px;padding:14px 20px 16px;justify-content:flex-end;border-top:1px solid #e2e8f0;background:#f8fafc}
+      .sip-cert-print-btn{border:0;border-radius:12px;background:#15803d;color:#fff;padding:10px 20px;font-weight:800;font-size:14px;cursor:pointer}
+      .sip-cert-print-btn:hover{background:#166534}
+      .sip-cert-body{padding:40px 48px 32px;background:linear-gradient(160deg,#f0fdf4 0%,#fff 45%,#f0f9ff 100%);border:6px solid transparent;background-clip:padding-box;position:relative}
+      .sip-cert-body::before{content:"";position:absolute;inset:0;border-radius:0;border:3px solid #bbf7d0;pointer-events:none}
+      .sip-cert-corner{position:absolute;width:32px;height:32px;border-color:#15803d;border-style:solid;opacity:.5}
+      .sip-cert-corner.tl{top:10px;left:10px;border-width:3px 0 0 3px}
+      .sip-cert-corner.tr{top:10px;right:10px;border-width:3px 3px 0 0}
+      .sip-cert-corner.bl{bottom:10px;left:10px;border-width:0 0 3px 3px}
+      .sip-cert-corner.br{bottom:10px;right:10px;border-width:0 3px 3px 0}
+      .sip-cert-eyebrow{font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#15803d;text-align:center}
+      .sip-cert-title{text-align:center;font-size:22px;font-weight:900;color:#0f172a;margin:6px 0 4px;letter-spacing:-.01em}
+      .sip-cert-sub{text-align:center;font-size:13px;color:#64748b;margin-bottom:24px}
+      .sip-cert-divider{border:none;border-top:1px solid #e2e8f0;margin:0 0 22px}
+      .sip-cert-given{text-align:center;font-size:12px;color:#64748b;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+      .sip-cert-recipient{text-align:center;font-size:34px;font-weight:900;color:#15803d;line-height:1.1;margin-bottom:6px}
+      .sip-cert-subrec{text-align:center;font-size:14px;color:#334155;font-weight:600;margin-bottom:4px}
+      .sip-cert-school{text-align:center;font-size:13px;color:#64748b;margin-bottom:22px}
+      .sip-cert-desc{text-align:center;font-size:14px;color:#475569;line-height:1.6;margin-bottom:24px;max-width:480px;margin-left:auto;margin-right:auto}
+      .sip-cert-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px}
+      .sip-cert-stat{border:1px solid #e2e8f0;border-radius:12px;padding:10px 6px;text-align:center;background:#fff}
+      .sip-cert-stat strong{display:block;font-size:18px;font-weight:900;color:#0f172a;line-height:1}
+      .sip-cert-stat span{display:block;font-size:10px;color:#64748b;font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+      .sip-cert-footer{display:flex;align-items:center;justify-content:space-between}
+      .sip-cert-date{font-size:12px;color:#94a3b8}
+      .sip-cert-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#166534;background:#dcfce7;border:1px solid #bbf7d0;border-radius:999px;padding:4px 10px}
+      @media print{
+        body>*:not(#sip-cert-modal){display:none!important}
+        #sip-cert-modal{position:static!important;background:none!important;backdrop-filter:none!important;padding:0!important;display:block!important}
+        .sip-cert-wrap{box-shadow:none!important;border-radius:0!important;max-width:100%!important}
+        .sip-cert-close,.sip-cert-actions{display:none!important}
+        .sip-cert-body{padding:28px 36px!important}
+      }
+    `;
+    document.head.appendChild(style);
+
+    const modal = document.createElement("div");
+    modal.id = "sip-cert-modal";
+    modal.innerHTML = `
+      <div class="sip-cert-wrap">
+        <button class="sip-cert-close" id="sip-cert-close-btn" aria-label="Tutup">×</button>
+        <div class="sip-cert-body">
+          <div class="sip-cert-corner tl"></div>
+          <div class="sip-cert-corner tr"></div>
+          <div class="sip-cert-corner bl"></div>
+          <div class="sip-cert-corner br"></div>
+          <div class="sip-cert-eyebrow">SIPILAH · Media Ajar KKA SMP/MTs</div>
+          <h2 class="sip-cert-title">Sertifikat Penyelesaian Proyek</h2>
+          <p class="sip-cert-sub">Kecerdasan Artifisial: Klasifikasi Sampah Sekolah</p>
+          <hr class="sip-cert-divider"/>
+          <div class="sip-cert-given">Diberikan kepada</div>
+          <div class="sip-cert-recipient">${recipient}</div>
+          ${subLine ? `<div class="sip-cert-subrec">${subLine}</div>` : ""}
+          ${schoolLine ? `<div class="sip-cert-school">${schoolLine}</div>` : ""}
+          <p class="sip-cert-desc">
+            Telah menyelesaikan seluruh tahapan Proyek AI SIPILAH: Pre-Test, pengumpulan dataset sampah,
+            pelabelan, pelatihan model, pengujian prediksi, analisis akurasi, Post-Test, dan penyusunan laporan proyek.
+          </p>
+          <div class="sip-cert-stats">
+            <div class="sip-cert-stat"><strong>${metrics.totalDataset || "—"}</strong><span>Foto Dataset</span></div>
+            <div class="sip-cert-stat"><strong>${accuracy}</strong><span>Akurasi Model</span></div>
+            <div class="sip-cert-stat"><strong>${prePost}</strong><span>Pre → Post Test</span></div>
+            <div class="sip-cert-stat"><strong>${gainText}</strong><span>Peningkatan</span></div>
+          </div>
+          <div class="sip-cert-footer">
+            <span class="sip-cert-date">${date}</span>
+            <span class="sip-cert-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Selaras CP KKA Fase D · Kurikulum Merdeka
+            </span>
+          </div>
+        </div>
+        <div class="sip-cert-actions">
+          <button class="sip-cert-print-btn" id="sip-cert-print-btn">🖨️ Cetak / Simpan PDF</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.getElementById("sip-cert-close-btn").addEventListener("click", () => {
+      modal.remove();
+      const s = document.getElementById("sip-cert-style");
+      if (s) s.remove();
+    });
+    document.getElementById("sip-cert-print-btn").addEventListener("click", () => window.print());
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.remove();
+        const s = document.getElementById("sip-cert-style");
+        if (s) s.remove();
+      }
+    });
+  }
+
+  async function exportProject() {
+    const project = readJSON("sipilah_project_v1", {});
+    let photos = [];
+    try { photos = await window.SipDB.getAll(); } catch (e) {}
+    const payload = {
+      v: 1,
+      sipilah: "project-sync",
+      exported: new Date().toISOString(),
+      project,
+      photos: photos.map((p) => ({ category: p.category, dataUrl: p.dataUrl, ts: p.ts })),
+    };
+    const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sipilah-proyek-kelompok.json";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    return photos.length;
+  }
+
+  async function importProject(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.sipilah !== "project-sync") throw new Error("File bukan file proyek SIPILAH.");
+          if (data.project) localStorage.setItem("sipilah_project_v1", JSON.stringify(data.project));
+          if (Array.isArray(data.photos) && data.photos.length) {
+            await window.SipDB.clearAll();
+            for (const photo of data.photos) {
+              await window.SipDB.savePhoto(photo.category, photo.dataUrl);
+            }
+          }
+          resolve({ photoCount: (data.photos || []).length });
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error("Gagal membaca file."));
+      reader.readAsText(file);
+    });
+  }
+
+  function renderSyncModal() {
+    if (document.getElementById("sip-sync-modal")) return;
+    const modal = document.createElement("div");
+    modal.id = "sip-sync-modal";
+    modal.style.cssText = "position:fixed;inset:0;z-index:130;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.6);backdrop-filter:blur(8px);font-family:system-ui,sans-serif";
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px;box-shadow:0 40px 100px -30px rgba(15,23,42,.6);max-width:420px;width:100%;overflow:hidden">
+        <div style="padding:20px 22px 0;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#15803d">Sinkron Kelompok</div>
+            <div style="font-size:18px;font-weight:900;color:#0f172a;margin-top:2px">Bagikan Progress Proyek</div>
+          </div>
+          <button id="sip-sync-close" style="border:1px solid #e2e8f0;background:#fff;border-radius:10px;width:32px;height:32px;font-size:20px;cursor:pointer;color:#64748b">×</button>
+        </div>
+        <div style="padding:16px 22px 22px;display:grid;gap:10px">
+          <div style="border:1px solid #e2e8f0;border-radius:14px;padding:14px;background:#f8fafc">
+            <div style="font-size:12px;font-weight:800;color:#0f172a;margin-bottom:4px">📤 Ekspor Proyek</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5;margin-bottom:10px">Download file JSON berisi dataset + data proyek. Kirim ke anggota kelompok lain via chat/Google Drive.</div>
+            <button id="sip-sync-export-btn" style="border:0;border-radius:10px;background:#0f172a;color:#fff;padding:9px 16px;font:800 12px system-ui,sans-serif;cursor:pointer;width:100%">📥 Download sipilah-proyek-kelompok.json</button>
+            <div id="sip-sync-export-status" style="display:none;margin-top:8px;font-size:11px;font-weight:700;color:#15803d;text-align:center"></div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:14px;padding:14px;background:#f8fafc">
+            <div style="font-size:12px;font-weight:800;color:#0f172a;margin-bottom:4px">📂 Impor Proyek</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5;margin-bottom:10px">Upload file JSON dari ketua kelompok. Identitas &amp; nilai tes kamu tidak akan berubah.</div>
+            <button id="sip-sync-import-btn" style="border:1px solid #bbf7d0;border-radius:10px;background:#f0fdf4;color:#15803d;padding:9px 16px;font:800 12px system-ui,sans-serif;cursor:pointer;width:100%">📤 Pilih File JSON…</button>
+            <input id="sip-sync-file-input" type="file" accept=".json,application/json" style="display:none">
+            <div id="sip-sync-import-status" style="display:none;margin-top:8px;font-size:11px;font-weight:700;text-align:center"></div>
+          </div>
+          <div style="font-size:11px;color:#94a3b8;text-align:center;line-height:1.5">Model AI perlu dilatih ulang di perangkat tujuan setelah impor.</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById("sip-sync-close").addEventListener("click", () => modal.remove());
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+
+    document.getElementById("sip-sync-export-btn").addEventListener("click", async () => {
+      const btn = document.getElementById("sip-sync-export-btn");
+      const status = document.getElementById("sip-sync-export-status");
+      btn.disabled = true;
+      btn.textContent = "Menyiapkan…";
+      try {
+        const count = await exportProject();
+        status.style.display = "block";
+        status.textContent = `✅ File berhasil diunduh (${count} foto, data proyek)`;
+        btn.textContent = "📥 Download sipilah-proyek-kelompok.json";
+      } catch {
+        status.style.display = "block";
+        status.style.color = "#dc2626";
+        status.textContent = "Gagal mengekspor. Coba lagi.";
+        btn.textContent = "📥 Download sipilah-proyek-kelompok.json";
+      }
+      btn.disabled = false;
+    });
+
+    document.getElementById("sip-sync-import-btn").addEventListener("click", () => {
+      document.getElementById("sip-sync-file-input").click();
+    });
+
+    document.getElementById("sip-sync-file-input").addEventListener("change", async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const btn = document.getElementById("sip-sync-import-btn");
+      const status = document.getElementById("sip-sync-import-status");
+      btn.disabled = true;
+      btn.textContent = "Mengimpor…";
+      status.style.display = "block";
+      status.style.color = "#64748b";
+      status.textContent = "Sedang memproses…";
+      try {
+        const result = await importProject(file);
+        status.style.color = "#15803d";
+        status.textContent = `✅ Berhasil! ${result.photoCount} foto diimpor. Halaman akan dimuat ulang…`;
+        setTimeout(() => { modal.remove(); location.reload(); }, 1800);
+      } catch (err) {
+        status.style.color = "#dc2626";
+        status.textContent = `❌ ${err.message}`;
+        btn.textContent = "📤 Pilih File JSON…";
+        btn.disabled = false;
+      }
+    });
+  }
+
   function init() {
     injectStyles();
     if (document.getElementById("sip-showcase-button")) return;
+
     const btn = document.createElement("button");
     btn.id = "sip-showcase-button";
     btn.className = "sip-show-btn";
@@ -192,6 +441,22 @@
     btn.innerHTML = "<span></span> Mode Presentasi Lomba";
     btn.addEventListener("click", renderModal);
     document.body.appendChild(btn);
+
+    const certBtn = document.createElement("button");
+    certBtn.id = "sip-cert-button";
+    certBtn.type = "button";
+    certBtn.style.cssText = "position:fixed;right:18px;bottom:64px;z-index:80;border:1px solid #bbf7d0;border-radius:16px;background:#f0fdf4;color:#15803d;padding:9px 14px;font:800 12px system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 14px -4px rgba(21,128,61,.25)";
+    certBtn.innerHTML = "🏅 Sertifikat Proyek";
+    certBtn.addEventListener("click", renderCertificate);
+    document.body.appendChild(certBtn);
+
+    const syncBtn = document.createElement("button");
+    syncBtn.id = "sip-sync-button";
+    syncBtn.type = "button";
+    syncBtn.style.cssText = "position:fixed;right:18px;bottom:108px;z-index:80;border:1px solid #bfdbfe;border-radius:16px;background:#eff6ff;color:#1d4ed8;padding:9px 14px;font:800 12px system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 14px -4px rgba(29,78,216,.2)";
+    syncBtn.innerHTML = "🔄 Sinkron Kelompok";
+    syncBtn.addEventListener("click", renderSyncModal);
+    document.body.appendChild(syncBtn);
   }
 
   if (document.readyState === "loading") {

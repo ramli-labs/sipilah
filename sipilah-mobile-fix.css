@@ -1,0 +1,19 @@
+@media (max-width: 767px) {
+  .md\:hidden.fixed.inset-0.z-50.flex > .relative {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .md\:hidden.fixed.inset-0.z-50.flex aside {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .md\:hidden.fixed.inset-0.z-50.flex aside nav {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8rem;
+  }
+}

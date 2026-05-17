@@ -126,6 +126,18 @@
           </div>
           <button type="button" class="sip-show-copy">Salin Ringkasan</button>
         </div>
+
+        <div class="sip-show-qr-row">
+          <div style="flex:1;min-width:0">
+            <div class="sip-show-eyebrow">Demo &amp; Dokumentasi</div>
+            <h3 style="margin:6px 0 5px;color:#0f172a;font-size:17px;font-weight:900">Scan &amp; Cetak Laporan</h3>
+            <p style="margin:0;color:#475569;font-size:13px;line-height:1.5">Tampilkan QR ke juri agar mereka bisa langsung mencoba SIPILAH dari HP. Atau cetak laporan lengkap sebagai dokumentasi proyek.</p>
+            <button class="sip-show-laporan-btn" type="button">📄 Cetak Laporan Lengkap</button>
+          </div>
+          <div class="sip-show-qr-box" id="sip-qr-container">
+            <div style="font-size:10px;color:#94a3b8">Memuat QR…</div>
+          </div>
+        </div>
       </section>
     `;
 
@@ -141,9 +153,14 @@
           setTimeout(() => (event.target.textContent = "Salin Ringkasan"), 1200);
         }
       }
+      if (event.target && event.target.classList.contains("sip-show-laporan-btn")) {
+        renderLaporanModal();
+      }
     });
 
     document.body.appendChild(root);
+    const qrContainer = document.getElementById("sip-qr-container");
+    if (qrContainer) renderQR(qrContainer, location.href.split("?")[0]);
   }
 
   function injectStyles() {
@@ -178,8 +195,221 @@
       .sip-show-copy{border:0;border-radius:12px;background:#facc15;color:#422006;padding:11px 14px;font-weight:900;cursor:pointer;white-space:nowrap}
       @media(max-width:860px){.sip-show-btn{right:12px;bottom:12px}.sip-show-dialog{margin:10px;max-height:calc(100vh - 20px)}.sip-show-hero,.sip-show-script{grid-template-columns:1fr}.sip-show-stats,.sip-show-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sip-show-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media(max-width:520px){.sip-show-stats,.sip-show-grid{grid-template-columns:1fr}.sip-show-hero h2{font-size:28px}}
+      .sip-show-qr-row{display:flex;align-items:center;gap:20px;margin:0 24px 24px;padding:16px;border:1px solid #e2e8f0;border-radius:18px;background:#f8fafc}
+      .sip-show-qr-box{flex-shrink:0;width:144px;height:144px;display:grid;place-items:center;background:#fff;border-radius:10px;border:1px solid #e2e8f0}
+      .sip-show-qr-box img{width:132px;height:132px;border-radius:6px;display:block}
+      .sip-show-laporan-btn{border:0;border-radius:12px;background:#f59e0b;color:#422006;padding:9px 14px;font:800 12px system-ui,sans-serif;cursor:pointer;margin-top:8px;display:inline-block}
+      .sip-show-laporan-btn:hover{background:#d97706}
+      @media(max-width:600px){.sip-show-qr-row{flex-direction:column-reverse;align-items:flex-start}}
     `;
     document.head.appendChild(style);
+  }
+
+  function buildLaporanAnalysis(metrics) {
+    const parts = [];
+    if (metrics.totalDataset >= 40) {
+      parts.push(`Kelompok berhasil mengumpulkan ${metrics.totalDataset} foto dataset yang mencakup keempat kategori sampah sekolah. Jumlah ini memadai untuk melatih model klasifikasi yang representatif.`);
+    } else if (metrics.totalDataset >= 16) {
+      parts.push(`Kelompok mengumpulkan ${metrics.totalDataset} foto dataset. Dataset ini cukup untuk memulai pelatihan model; penambahan foto dapat meningkatkan akurasi lebih jauh.`);
+    } else {
+      parts.push(`Kelompok mengumpulkan ${metrics.totalDataset} foto dataset sampah sekolah. Menambah variasi foto pada setiap kategori akan memperkuat kemampuan model mengenali pola yang lebih beragam.`);
+    }
+    if (metrics.modelReady) {
+      const acc = metrics.modelAccuracy || 0;
+      if (acc >= 80) parts.push(`Model AI yang dilatih mencapai akurasi ${acc}%, menunjukkan kemampuan klasifikasi yang baik dalam membedakan plastik, kertas, organik, dan residu.`);
+      else if (acc >= 60) parts.push(`Model AI mencapai akurasi ${acc}%, menunjukkan model mampu mempelajari pola dasar keempat kategori sampah. Penambahan foto atau penyesuaian label dapat meningkatkan hasilnya.`);
+      else parts.push(`Model AI mencapai akurasi ${acc}%. Hasil ini menjadi bahan refleksi: galeri kesalahan prediksi dapat dianalisis untuk memahami pola yang perlu diperkuat.`);
+    } else {
+      parts.push("Model AI belum dilatih. Tahap pelatihan dapat dilanjutkan setelah dataset selesai dikumpulkan.");
+    }
+    if (metrics.pre != null && metrics.post != null) {
+      if (metrics.gain > 0) parts.push(`Asesmen literasi AI menunjukkan peningkatan nyata: skor Pre-Test ${metrics.pre} meningkat menjadi ${metrics.post} pada Post-Test (+${metrics.gain} poin), mencerminkan penguatan pemahaman melalui pengalaman proyek langsung.`);
+      else if (metrics.gain === 0) parts.push(`Skor asesmen stabil dari Pre-Test (${metrics.pre}) ke Post-Test (${metrics.post}). Refleksi lebih mendalam pada setiap tahapan dapat mengkonsolidasi pemahaman yang telah diperoleh.`);
+      else parts.push(`Terdapat selisih antara Pre-Test (${metrics.pre}) dan Post-Test (${metrics.post}). Perbedaan ini menjadi bahan evaluasi: aspek mana yang perlu diperkuat agar pemahaman AI lebih solid.`);
+    }
+    parts.push("Proyek SIPILAH ini membuktikan bahwa pembelajaran kecerdasan artifisial dapat dilakukan secara nyata di lingkungan sekolah melalui pendekatan berbasis aksi pilah sampah yang dekat dengan keseharian siswa.");
+    return parts.join(" ");
+  }
+
+  function renderQR(container, url) {
+    const img = document.createElement("img");
+    img.src = "https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=" + encodeURIComponent(url) + "&bgcolor=ffffff&color=0f172a&margin=2";
+    img.alt = "QR Code";
+    img.style.cssText = "width:132px;height:132px;border-radius:6px;display:block";
+    img.onerror = () => {
+      container.innerHTML = `<div style="width:132px;height:132px;display:grid;place-items:center;font-size:9px;color:#64748b;text-align:center;padding:8px;word-break:break-all;line-height:1.4">${url}</div>`;
+    };
+    container.innerHTML = "";
+    container.appendChild(img);
+  }
+
+  function renderLaporanModal() {
+    if (document.getElementById("sip-laporan-modal")) return;
+    const metrics = getMetrics();
+    const identity = metrics.identity || {};
+    const dataset = metrics.dataset || {};
+    const date = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+    const kelompok = (identity.group || "").trim() || "—";
+    const kelas = (identity.kelas || "").trim() || "—";
+    const school = (identity.school || "").trim() || "—";
+    const name = (identity.name || "").trim() || "—";
+    const role = identity.role || "Siswa";
+    const gainText = metrics.gain != null ? `${metrics.gain >= 0 ? "+" : ""}${metrics.gain} poin` : "—";
+    const prePost = metrics.pre != null && metrics.post != null ? `${metrics.pre} → ${metrics.post}` : "— → —";
+    const accuracy = metrics.modelReady ? `${metrics.modelAccuracy || 0}%` : "Belum dilatih";
+    const analysis = buildLaporanAnalysis(metrics);
+    const cats = ["plastik", "kertas", "organik", "residu"];
+    const catColors = { plastik: "#0ea5e9", kertas: "#f59e0b", organik: "#10b981", residu: "#64748b" };
+    const catLabels = { plastik: "Plastik", kertas: "Kertas", organik: "Organik", residu: "Residu" };
+    const maxCat = Math.max(...cats.map((c) => dataset[c] || 0), 1);
+
+    const style = document.createElement("style");
+    style.id = "sip-laporan-style";
+    style.textContent = `
+      #sip-laporan-modal{position:fixed;inset:0;z-index:130;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;background:rgba(15,23,42,.65);backdrop-filter:blur(10px);font-family:system-ui,-apple-system,sans-serif}
+      .sip-lap-wrap{background:#fff;border-radius:20px;box-shadow:0 40px 100px -30px rgba(15,23,42,.6);max-width:780px;width:100%;margin:auto}
+      .sip-lap-actions{display:flex;gap:10px;padding:12px 20px 14px;justify-content:flex-end;border-bottom:1px solid #e2e8f0;background:#f8fafc;border-radius:20px 20px 0 0}
+      .sip-lap-close-btn{border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:7px 14px;font:700 12px system-ui,sans-serif;cursor:pointer;color:#64748b}
+      .sip-lap-print-btn{border:0;border-radius:10px;background:#15803d;color:#fff;padding:8px 18px;font:800 13px system-ui,sans-serif;cursor:pointer}
+      .sip-lap-print-btn:hover{background:#166534}
+      .sip-lap-body{padding:32px 36px 28px}
+      .sip-lap-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #15803d}
+      .sip-lap-title{font-size:20px;font-weight:900;color:#0f172a;margin:0 0 3px}
+      .sip-lap-sub{font-size:12px;color:#64748b;margin:0}
+      .sip-lap-badge{font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#15803d;background:#dcfce7;border:1px solid #bbf7d0;border-radius:999px;padding:3px 8px;white-space:nowrap;margin-top:6px;display:inline-block}
+      .sip-lap-identity{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:18px;background:#f8fafc;border-radius:12px;padding:12px 14px;border:1px solid #e2e8f0}
+      .sip-lap-id-item{font-size:11px;color:#64748b}.sip-lap-id-item strong{color:#0f172a;font-weight:800}
+      .sip-lap-section{margin-bottom:18px}
+      .sip-lap-section-title{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#15803d;margin:0 0 8px;padding-bottom:5px;border-bottom:1px solid #e2e8f0}
+      .sip-lap-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+      .sip-lap-stat{border:1px solid #e2e8f0;border-radius:10px;padding:10px 8px;text-align:center;background:#fff}
+      .sip-lap-stat strong{display:block;font-size:20px;font-weight:900;color:#0f172a;line-height:1}
+      .sip-lap-stat span{display:block;font-size:9px;color:#64748b;font-weight:700;margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+      .sip-lap-bars{display:grid;gap:7px}
+      .sip-lap-bar-row{display:grid;grid-template-columns:64px 1fr 32px;align-items:center;gap:8px;font-size:11px}
+      .sip-lap-bar-label{font-weight:700;color:#334155}
+      .sip-lap-bar-track{height:10px;background:#f1f5f9;border-radius:999px;overflow:hidden}
+      .sip-lap-bar-fill{height:100%;border-radius:999px;transition:width .4s ease}
+      .sip-lap-bar-count{font-weight:800;color:#64748b;text-align:right}
+      .sip-lap-prepost{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;background:#f0fdf4;border-radius:12px;padding:14px;border:1px solid #bbf7d0}
+      .sip-lap-pp-box{text-align:center}
+      .sip-lap-pp-box strong{display:block;font-size:28px;font-weight:900;color:#0f172a;line-height:1}
+      .sip-lap-pp-box span{display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+      .sip-lap-pp-arrow{font-size:24px;color:#15803d;font-weight:900;text-align:center}
+      .sip-lap-analysis{font-size:12px;color:#334155;line-height:1.7;background:#fafbf7;border-radius:10px;padding:12px 14px;border:1px solid #e2e8f0}
+      .sip-lap-steps{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+      .sip-lap-step{border-radius:8px;background:#ecfdf5;color:#166534;text-align:center;font-size:9px;font-weight:800;padding:7px 4px;border:1px solid #bbf7d0}
+      .sip-lap-footer{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8}
+      @media print{
+        body>*:not(#sip-laporan-modal){display:none!important}
+        #sip-laporan-modal{position:static!important;background:none!important;backdrop-filter:none!important;padding:0!important;overflow:visible!important;display:block!important}
+        .sip-lap-wrap{box-shadow:none!important;border-radius:0!important;max-width:100%!important}
+        .sip-lap-actions{display:none!important}
+        .sip-lap-body{padding:20px 24px!important}
+      }
+    `;
+    document.head.appendChild(style);
+
+    const modal = document.createElement("div");
+    modal.id = "sip-laporan-modal";
+    modal.innerHTML = `
+      <div class="sip-lap-wrap">
+        <div class="sip-lap-actions">
+          <button class="sip-lap-close-btn" id="sip-lap-close">Tutup</button>
+          <button class="sip-lap-print-btn" id="sip-lap-print">🖨️ Cetak / Simpan PDF</button>
+        </div>
+        <div class="sip-lap-body">
+          <div class="sip-lap-header">
+            <div>
+              <h1 class="sip-lap-title">Laporan Proyek AI — SIPILAH</h1>
+              <p class="sip-lap-sub">Kecerdasan Artifisial: Klasifikasi Sampah Sekolah</p>
+              <span class="sip-lap-badge">Selaras CP KKA Fase D · Kurikulum Merdeka</span>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:11px;font-weight:800;color:#0f172a">${date}</div>
+              <div style="font-size:10px;color:#64748b;margin-top:2px">SIPILAH · Media Ajar SMP/MTs</div>
+            </div>
+          </div>
+
+          <div class="sip-lap-identity">
+            <div class="sip-lap-id-item">Kelompok: <strong>${kelompok}</strong></div>
+            <div class="sip-lap-id-item">Sekolah: <strong>${school}</strong></div>
+            <div class="sip-lap-id-item">Nama: <strong>${name}</strong> · <strong>${role}</strong></div>
+            <div class="sip-lap-id-item">Kelas: <strong>${kelas}</strong></div>
+          </div>
+
+          <div class="sip-lap-section">
+            <div class="sip-lap-section-title">Ringkasan Proyek</div>
+            <div class="sip-lap-stats">
+              <div class="sip-lap-stat"><strong>${metrics.totalDataset}</strong><span>Foto Dataset</span></div>
+              <div class="sip-lap-stat"><strong>${accuracy}</strong><span>Akurasi Model</span></div>
+              <div class="sip-lap-stat"><strong>${metrics.predictions}</strong><span>Uji Prediksi</span></div>
+              <div class="sip-lap-stat"><strong>${gainText}</strong><span>Gain Asesmen</span></div>
+            </div>
+          </div>
+
+          <div class="sip-lap-section">
+            <div class="sip-lap-section-title">Dataset per Kategori</div>
+            <div class="sip-lap-bars">
+              ${cats.map((c) => `
+                <div class="sip-lap-bar-row">
+                  <span class="sip-lap-bar-label">${catLabels[c]}</span>
+                  <div class="sip-lap-bar-track"><div class="sip-lap-bar-fill" style="width:${Math.round(((dataset[c] || 0) / maxCat) * 100)}%;background:${catColors[c]}"></div></div>
+                  <span class="sip-lap-bar-count">${dataset[c] || 0}</span>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="sip-lap-section">
+            <div class="sip-lap-section-title">Hasil Asesmen Literasi AI</div>
+            <div class="sip-lap-prepost">
+              <div class="sip-lap-pp-box">
+                <strong>${metrics.pre != null ? metrics.pre : "—"}</strong>
+                <span>Pre-Test</span>
+              </div>
+              <div class="sip-lap-pp-arrow">→</div>
+              <div class="sip-lap-pp-box">
+                <strong style="color:${metrics.gain != null && metrics.gain >= 0 ? "#15803d" : "#dc2626"}">${metrics.post != null ? metrics.post : "—"}</strong>
+                <span>Post-Test</span>
+              </div>
+            </div>
+            ${metrics.gain != null ? `<p style="margin:8px 0 0;font-size:12px;font-weight:700;text-align:center;color:${metrics.gain >= 0 ? "#15803d" : "#dc2626"}">${metrics.gain > 0 ? "🎉 Naik " + metrics.gain + " poin" : metrics.gain === 0 ? "💪 Stabil" : "📚 Turun " + Math.abs(metrics.gain) + " poin — bahan refleksi"}</p>` : ""}
+          </div>
+
+          <div class="sip-lap-section">
+            <div class="sip-lap-section-title">Analisis Proyek</div>
+            <p class="sip-lap-analysis">${analysis}</p>
+          </div>
+
+          <div class="sip-lap-section">
+            <div class="sip-lap-section-title">Alur Belajar yang Diselesaikan</div>
+            <div class="sip-lap-steps">
+              ${["Pre-Test","Dataset","Latih AI","Uji Model","Analisis","Post-Test","Laporan"].map((s) => `<div class="sip-lap-step">${s}</div>`).join("")}
+            </div>
+          </div>
+
+          <div class="sip-lap-footer">
+            <span>SIPILAH — Sistem Pembelajaran KKA Pilah Sampah Sekolah</span>
+            <span>${date}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById("sip-lap-close").addEventListener("click", () => {
+      modal.remove();
+      const s = document.getElementById("sip-laporan-style");
+      if (s) s.remove();
+    });
+    document.getElementById("sip-lap-print").addEventListener("click", () => window.print());
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.remove();
+        const s = document.getElementById("sip-laporan-style");
+        if (s) s.remove();
+      }
+    });
   }
 
   function renderCertificate() {

@@ -12,19 +12,19 @@
   "categories": ["education", "productivity", "utilities"],
   "icons": [
     {
-      "src": "logo-sipilah.png",
+      "src": "assets/logo-sipilah.png",
       "sizes": "500x500",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.svg",
+      "src": "assets/icon-512.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "icon-512.svg",
+      "src": "assets/icon-512.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"

@@ -4,24 +4,24 @@
  * pada fetch pertama saat "Latih Model" dibuka.
  */
 
-const CACHE_NAME = 'sipilah-v37-prod-2026';
+const CACHE_NAME = 'sipilah-v38-prod-2026';
 
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './sipilah-merge.js?v=audit-real-20260517',
-  './bundle.js?v=audit-real-20260517',
-  './sipilah-3t-map.js?v=audit-real-20260517',
-  './sipilah-showcase.js?v=audit-real-20260517',
-  './sipilah-branding.js?v=audit-real-20260517',
-  './sipilah-mobile-fix.css?v=audit-real-20260517',
-  './logo-sipilah.png',
-  './logo-rjm.png',
-  './peta-indonesia-persis.svg',
-  './style.css',
-  './icon-192.svg',
-  './icon-512.svg',
+  './js/sipilah-merge.js?v=audit-real-20260517',
+  './js/bundle.js?v=audit-real-20260517',
+  './js/sipilah-3t-map.js?v=audit-real-20260517',
+  './js/sipilah-showcase.js?v=audit-real-20260517',
+  './js/sipilah-branding.js?v=audit-real-20260517',
+  './css/sipilah-mobile-fix.css?v=audit-real-20260517',
+  './assets/logo-sipilah.png',
+  './assets/logo-rjm.png',
+  './assets/peta-indonesia-persis.svg',
+  './css/style.css',
+  ,
+  './assets/icon-512.svg',
   './mobilenet/model.json',
   './mobilenet/group1-shard1of1.bin',
 ];

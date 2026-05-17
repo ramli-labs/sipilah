@@ -54,7 +54,7 @@
         </linearGradient>
       </defs>
       <rect class="sip-3t-sea" width="1828" height="814" rx="0"/>
-      <image href="peta-indonesia-persis.svg" x="0" y="0" width="1828" height="814" preserveAspectRatio="xMidYMid meet"/>
+      <image href="assets/peta-indonesia-persis.svg" x="0" y="0" width="1828" height="814" preserveAspectRatio="xMidYMid meet"/>
       <path class="sip-3t-route" d="M320 439 C560 210 980 145 1518 403"/>
       <path class="sip-3t-route" d="M545 596 C790 705 1160 704 1438 647"/>
     `;

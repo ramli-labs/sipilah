@@ -1,6 +1,6 @@
 (function () {
-  const SIPILAH_LOGO = "logo-sipilah.png";
-  const RJM_LOGO = "logo-rjm.png";
+  const SIPILAH_LOGO = "assets/logo-sipilah.png";
+  const RJM_LOGO = "assets/logo-rjm.png";
 
   function injectStyles() {
     if (document.getElementById("sipilah-branding-style")) return;

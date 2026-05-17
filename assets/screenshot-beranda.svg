@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#fafbf7"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#15803d"/>
+  <text x="32" y="38" font-family="system-ui,sans-serif" font-weight="800" font-size="20" fill="white">SIPILAH</text>
+  <text x="160" y="38" font-family="system-ui,sans-serif" font-size="14" fill="rgba(255,255,255,0.85)">Sistem Pembelajaran KKA &amp; Pilah Sampah Sekolah</text>
+  <!-- Hero card -->
+  <rect x="32" y="80" width="820" height="220" rx="20" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="56" y="128" font-family="system-ui,sans-serif" font-weight="800" font-size="22" fill="#0f172a">Selamat Datang di SIPILAH</text>
+  <text x="56" y="156" font-family="system-ui,sans-serif" font-size="14" fill="#64748b">Belajar Kecerdasan Artifisial lewat Aksi Pilah Sampah Sekolah</text>
+  <!-- Step pills -->
+  <rect x="56" y="175" width="90" height="28" rx="14" fill="#dcfce7"/><text x="101" y="194" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#166534">Pre-Test</text>
+  <rect x="158" y="175" width="90" height="28" rx="14" fill="#dbeafe"/><text x="203" y="194" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#1d4ed8">Dataset</text>
+  <rect x="260" y="175" width="90" height="28" rx="14" fill="#fef9c3"/><text x="305" y="194" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#854d0e">Latih AI</text>
+  <rect x="362" y="175" width="90" height="28" rx="14" fill="#fce7f3"/><text x="407" y="194" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#9d174d">Uji Model</text>
+  <rect x="464" y="175" width="90" height="28" rx="14" fill="#e0e7ff"/><text x="509" y="194" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#3730a3">Analisis</text>
+  <rect x="566" y="175" width="90" height="28" rx="14" fill="#dcfce7"/><text x="611" y="194" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#166534">Post-Test</text>
+  <rect x="668" y="175" width="90" height="28" rx="14" fill="#f3f4f6"/><text x="713" y="194" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#374151">Laporan</text>
+  <!-- Peta 3T card -->
+  <rect x="32" y="316" width="820" height="180" rx="20" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="56" y="350" font-family="system-ui,sans-serif" font-weight="800" font-size="16" fill="#0f172a">Peta Jangkauan 3T — Indonesia</text>
+  <text x="56" y="372" font-family="system-ui,sans-serif" font-size="13" fill="#64748b">Target replikasi ke sekolah kepulauan, perbatasan, dan pegunungan</text>
+  <rect x="56" y="390" width="760" height="90" rx="12" fill="#f0fdf4"/>
+  <circle cx="160" cy="435" r="6" fill="#15803d"/><text x="173" y="439" font-family="system-ui,sans-serif" font-size="11" fill="#166534">Kep. Mentawai</text>
+  <circle cx="340" cy="420" r="6" fill="#0369a1"/><text x="353" y="424" font-family="system-ui,sans-serif" font-size="11" fill="#0369a1">Kab. Natuna</text>
+  <circle cx="520" cy="440" r="6" fill="#7c3aed"/><text x="533" y="444" font-family="system-ui,sans-serif" font-size="11" fill="#7c3aed">Tana Toraja</text>
+  <circle cx="680" cy="430" r="6" fill="#b45309"/><text x="693" y="434" font-family="system-ui,sans-serif" font-size="11" fill="#b45309">Banda Naira</text>
+  <!-- Right sidebar -->
+  <rect x="872" y="80" width="376" height="420" rx="20" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="896" y="120" font-family="system-ui,sans-serif" font-weight="800" font-size="15" fill="#0f172a">Fitur Utama</text>
+  <rect x="896" y="134" width="328" height="60" rx="12" fill="#f0fdf4"/>
+  <text x="916" y="162" font-family="system-ui,sans-serif" font-weight="700" font-size="13" fill="#166534">📸 Dataset Sampah Sekolah</text>
+  <text x="916" y="180" font-family="system-ui,sans-serif" font-size="12" fill="#64748b">Kumpulkan foto plastik, kertas, organik, residu</text>
+  <rect x="896" y="206" width="328" height="60" rx="12" fill="#eff6ff"/>
+  <text x="916" y="234" font-family="system-ui,sans-serif" font-weight="700" font-size="13" fill="#1d4ed8">🤖 Latih Model AI</text>
+  <text x="916" y="252" font-family="system-ui,sans-serif" font-size="12" fill="#64748b">Transfer learning MobileNet, 100% offline</text>
+  <rect x="896" y="278" width="328" height="60" rx="12" fill="#fefce8"/>
+  <text x="916" y="306" font-family="system-ui,sans-serif" font-weight="700" font-size="13" fill="#854d0e">📊 Analisis Akurasi</text>
+  <text x="916" y="324" font-family="system-ui,sans-serif" font-size="12" fill="#64748b">Galeri kesalahan dan evaluasi model</text>
+  <rect x="896" y="350" width="328" height="60" rx="12" fill="#f5f3ff"/>
+  <text x="916" y="378" font-family="system-ui,sans-serif" font-weight="700" font-size="13" fill="#5b21b6">📝 Laporan Proyek</text>
+  <text x="916" y="396" font-family="system-ui,sans-serif" font-size="12" fill="#64748b">Pre-test, post-test, dan bukti hasil belajar</text>
+  <!-- Step bar -->
+  <rect x="0" y="686" width="1280" height="34" fill="rgba(255,255,255,0.95)" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="32" y="708" font-family="system-ui,sans-serif" font-weight="800" font-size="11" fill="#166534">Tahap 1 / 7 · Pre-Test</text>
+  <rect x="200" y="700" width="900" height="6" rx="3" fill="#e2e8f0"/>
+  <rect x="200" y="700" width="129" height="6" rx="3" fill="#15803d"/>
+  <text x="1116" y="708" font-family="system-ui,sans-serif" font-weight="800" font-size="11" fill="#64748b">14%</text>
+</svg>

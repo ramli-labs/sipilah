@@ -30,6 +30,22 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "assets/screenshot-beranda.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "Beranda SIPILAH — alur belajar KKA lengkap"
+    },
+    {
+      "src": "assets/screenshot-laporan.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "Laporan Proyek — perbandingan pre & post test"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Dataset Sampah",

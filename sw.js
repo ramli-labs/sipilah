@@ -4,7 +4,7 @@
  * pada fetch pertama saat "Latih Model" dibuka.
  */
 
-const CACHE_NAME = 'sipilah-v40-prod-2026';
+const CACHE_NAME = 'sipilah-v41-prod-2026';
 
 const APP_SHELL = [
   './',
@@ -21,6 +21,8 @@ const APP_SHELL = [
   './assets/peta-indonesia-persis.svg',
   './css/style.css',
   './assets/icon-512.svg',
+  './assets/screenshot-beranda.svg',
+  './assets/screenshot-laporan.svg',
   './mobilenet/model.json',
   './mobilenet/group1-shard1of1.bin',
 ];

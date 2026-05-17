@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#fafbf7"/>
+  <rect x="0" y="0" width="1280" height="60" fill="#15803d"/>
+  <text x="32" y="38" font-family="system-ui,sans-serif" font-weight="800" font-size="20" fill="white">SIPILAH</text>
+  <text x="160" y="38" font-family="system-ui,sans-serif" font-size="14" fill="rgba(255,255,255,0.85)">Laporan Proyek</text>
+  <!-- Pre vs Post comparison card -->
+  <rect x="32" y="80" width="580" height="200" rx="20" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="56" y="116" font-family="system-ui,sans-serif" font-weight="800" font-size="16" fill="#0f172a">✨ Perbandingan Pre-Test → Post-Test</text>
+  <!-- Pre-test box -->
+  <rect x="56" y="130" width="150" height="100" rx="14" fill="#f8fafc"/>
+  <text x="131" y="160" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#64748b">Pre-Test</text>
+  <text x="131" y="208" text-anchor="middle" font-family="system-ui,sans-serif" font-size="48" font-weight="800" fill="#334155">50</text>
+  <!-- Delta -->
+  <text x="260" y="175" text-anchor="middle" font-family="system-ui,sans-serif" font-size="36" font-weight="800" fill="#15803d">+30</text>
+  <text x="260" y="198" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#94a3b8">poin</text>
+  <!-- Post-test box -->
+  <rect x="330" y="130" width="150" height="100" rx="14" fill="#f0fdf4"/>
+  <text x="405" y="160" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#15803d">Post-Test</text>
+  <text x="405" y="208" text-anchor="middle" font-family="system-ui,sans-serif" font-size="48" font-weight="800" fill="#166534">80</text>
+  <!-- Banner -->
+  <rect x="56" y="242" width="426" height="28" rx="10" fill="#dcfce7"/>
+  <text x="269" y="261" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="#166534">🎉 Nilaimu naik 30 poin setelah proyek SIPILAH!</text>
+  <!-- Accuracy card -->
+  <rect x="632" y="80" width="616" height="200" rx="20" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="656" y="116" font-family="system-ui,sans-serif" font-weight="800" font-size="16" fill="#0f172a">Akurasi Model AI</text>
+  <text x="850" y="195" text-anchor="middle" font-family="system-ui,sans-serif" font-size="72" font-weight="800" fill="#15803d">87%</text>
+  <text x="850" y="220" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#64748b">dari 48 foto uji, 42 prediksi benar</text>
+  <rect x="656" y="240" width="240" height="28" rx="10" fill="#dcfce7"/>
+  <text x="776" y="259" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#166534">Plastik 92% · Kertas 88%</text>
+  <rect x="910" y="240" width="240" height="28" rx="10" fill="#fef9c3"/>
+  <text x="1030" y="259" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="700" fill="#854d0e">Organik 83% · Residu 80%</text>
+  <!-- Dataset summary -->
+  <rect x="32" y="298" width="580" height="120" rx="20" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="56" y="330" font-family="system-ui,sans-serif" font-weight="800" font-size="15" fill="#0f172a">Dataset Sampah Sekolah</text>
+  <rect x="56" y="344" width="120" height="60" rx="12" fill="#eff6ff"/>
+  <text x="116" y="368" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" font-weight="800" fill="#1d4ed8">12</text>
+  <text x="116" y="388" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Plastik</text>
+  <rect x="188" y="344" width="120" height="60" rx="12" fill="#fefce8"/>
+  <text x="248" y="368" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" font-weight="800" fill="#854d0e">10</text>
+  <text x="248" y="388" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Kertas</text>
+  <rect x="320" y="344" width="120" height="60" rx="12" fill="#f0fdf4"/>
+  <text x="380" y="368" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" font-weight="800" fill="#166534">11</text>
+  <text x="380" y="388" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Organik</text>
+  <rect x="452" y="344" width="120" height="60" rx="12" fill="#fce7f3"/>
+  <text x="512" y="368" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" font-weight="800" fill="#9d174d">15</text>
+  <text x="512" y="388" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Residu</text>
+  <!-- Identitas -->
+  <rect x="632" y="298" width="616" height="120" rx="20" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="656" y="330" font-family="system-ui,sans-serif" font-weight="800" font-size="15" fill="#0f172a">Identitas Kelompok</text>
+  <text x="656" y="358" font-family="system-ui,sans-serif" font-size="13" fill="#334155">Nama: <tspan font-weight="700">Kelompok Hijau</tspan></text>
+  <text x="656" y="378" font-family="system-ui,sans-serif" font-size="13" fill="#334155">Kelas: <tspan font-weight="700">8A</tspan></text>
+  <text x="656" y="398" font-family="system-ui,sans-serif" font-size="13" fill="#334155">Sekolah: <tspan font-weight="700">SMP Negeri 1 Contoh</tspan></text>
+  <!-- CP KKA badge -->
+  <rect x="656" y="408" width="230" height="22" rx="11" fill="#dcfce7" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="771" y="423" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="800" fill="#166534">✓ SELARAS CP KKA FASE D · KURIKULUM MERDEKA</text>
+  <!-- Step bar -->
+  <rect x="0" y="686" width="1280" height="34" fill="rgba(255,255,255,0.95)" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="32" y="708" font-family="system-ui,sans-serif" font-weight="800" font-size="11" fill="#166534">Tahap 7 / 7 · Laporan</text>
+  <rect x="200" y="700" width="900" height="6" rx="3" fill="#e2e8f0"/>
+  <rect x="200" y="700" width="900" height="6" rx="3" fill="#15803d"/>
+  <text x="1116" y="708" font-family="system-ui,sans-serif" font-weight="800" font-size="11" fill="#64748b">100%</text>
+</svg>

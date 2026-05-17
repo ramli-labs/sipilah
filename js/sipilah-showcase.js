@@ -89,7 +89,7 @@
             <p>Ringkasan masalah, solusi, alur belajar, dampak, dan bukti peningkatan literasi yang langsung terbaca saat presentasi.</p>
           </div>
           <div class="sip-show-school">
-            <strong>${fmt(identity.school, "SMP Labschool Jakarta")}</strong>
+            <strong>${fmt(identity.school, "Nama Sekolah")}</strong>
             <span>${fmt(identity.group, "Kelompok SIPILAH")} · Kelas ${fmt(identity.kelas, "-")}</span>
           </div>
         </div>

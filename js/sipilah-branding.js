@@ -70,7 +70,9 @@
   function detectCurrentStep() {
     const main = document.querySelector("main");
     if (!main) return null;
-    const text = main.textContent || "";
+    const headings = main.querySelectorAll("h1, h2, h3");
+    const text = Array.from(headings).map((h) => h.textContent).join(" ");
+    if (!text.trim()) return null;
     for (const s of STEPS) {
       if (s.keywords.some((kw) => text.includes(kw))) return s;
     }

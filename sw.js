@@ -4,7 +4,7 @@
  * pada fetch pertama saat "Latih Model" dibuka.
  */
 
-const CACHE_NAME = 'sipilah-v38-prod-2026';
+const CACHE_NAME = 'sipilah-v39-prod-2026';
 
 const APP_SHELL = [
   './',

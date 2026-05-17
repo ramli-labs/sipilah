@@ -4,14 +4,18 @@
  * pada fetch pertama saat "Latih Model" dibuka.
  */
 
-const CACHE_NAME = 'sipilah-v18-prod-2026';
+const CACHE_NAME = 'sipilah-v21-prod-2026';
 
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './bundle.js?v=pedagogy-layer-20260517',
-  './sipilah-3t-map.js?v=pedagogy-layer-20260517',
+  './bundle.js?v=browser-logo-20260517',
+  './sipilah-3t-map.js?v=browser-logo-20260517',
+  './sipilah-showcase.js?v=browser-logo-20260517',
+  './sipilah-branding.js?v=browser-logo-20260517',
+  './logo-sipilah.png',
+  './logo-rjm.png',
   './peta-indonesia-persis.svg',
   './style.css',
   './icon-192.svg',

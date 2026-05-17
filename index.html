@@ -14,8 +14,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
   <meta name="apple-mobile-web-app-title" content="SIPILAH"/>
-  <link rel="apple-touch-icon" href="icon-192.svg"/>
-  <link rel="icon" type="image/svg+xml" href="icon-192.svg"/>
+  <link rel="apple-touch-icon" href="logo-sipilah.png?v=browser-logo-20260517"/>
+  <link rel="icon" type="image/png" sizes="500x500" href="logo-sipilah.png?v=browser-logo-20260517"/>
 
   <!-- Local CSS (no Google Fonts, no Tailwind CDN runtime) -->
   <link rel="stylesheet" href="style.css"/>
@@ -25,7 +25,7 @@
     <!-- First-paint loader, dihapus oleh React saat mount -->
     <div style="min-height:100vh;display:grid;place-items:center;background:#fafbf7;color:#15803d;font-family:system-ui,sans-serif">
       <div style="text-align:center">
-        <div style="font-size:48px;margin-bottom:8px">&#9851;</div>
+        <img src="logo-sipilah.png" alt="Logo SIPILAH" style="width:72px;height:72px;object-fit:contain;margin:0 auto 10px;display:block"/>
         <div style="font-weight:700;font-size:18px">SIPILAH</div>
         <div style="color:#64748b;font-size:14px;margin-top:4px">Memuat aplikasi…</div>
       </div>
@@ -33,14 +33,16 @@
   </div>
 
   <!-- App bundle (React + TF.js + MobileNet loader + app, semua minified) -->
-  <script src="bundle.js?v=pedagogy-layer-20260517" defer></script>
-  <script src="sipilah-3t-map.js?v=pedagogy-layer-20260517" defer></script>
+  <script src="bundle.js?v=browser-logo-20260517" defer></script>
+  <script src="sipilah-3t-map.js?v=browser-logo-20260517" defer></script>
+  <script src="sipilah-showcase.js?v=browser-logo-20260517" defer></script>
+  <script src="sipilah-branding.js?v=browser-logo-20260517" defer></script>
 
   <!-- PWA registration -->
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=pedagogy-layer-20260517').then(
+        navigator.serviceWorker.register('sw.js?v=browser-logo-20260517').then(
           (reg) => console.log('[SW] Terdaftar:', reg.scope),
           (err) => console.warn('[SW] Gagal daftar:', err)
         );

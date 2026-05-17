@@ -19,7 +19,7 @@
 
   <!-- Local CSS (no Google Fonts, no Tailwind CDN runtime) -->
   <link rel="stylesheet" href="style.css"/>
-  <link rel="stylesheet" href="sipilah-mobile-fix.css?v=mobile-scroll-20260517"/>
+  <link rel="stylesheet" href="sipilah-mobile-fix.css?v=collab-real-20260517"/>
 </head>
 <body>
   <div id="root">
@@ -34,16 +34,17 @@
   </div>
 
   <!-- App bundle (React + TF.js + MobileNet loader + app, semua minified) -->
-  <script src="bundle.js?v=mobile-scroll-20260517" defer></script>
-  <script src="sipilah-3t-map.js?v=mobile-scroll-20260517" defer></script>
-  <script src="sipilah-showcase.js?v=mobile-scroll-20260517" defer></script>
-  <script src="sipilah-branding.js?v=mobile-scroll-20260517" defer></script>
+  <script src="bundle.js?v=collab-real-20260517" defer></script>
+  <script src="sipilah-3t-map.js?v=collab-real-20260517" defer></script>
+  <script src="sipilah-showcase.js?v=collab-real-20260517" defer></script>
+  <script src="sipilah-branding.js?v=collab-real-20260517" defer></script>
+  <script src="sipilah-merge.js?v=collab-real-20260517" defer></script>
 
   <!-- PWA registration -->
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=mobile-scroll-20260517').then(
+        navigator.serviceWorker.register('sw.js?v=collab-real-20260517').then(
           (reg) => console.log('[SW] Terdaftar:', reg.scope),
           (err) => console.warn('[SW] Gagal daftar:', err)
         );

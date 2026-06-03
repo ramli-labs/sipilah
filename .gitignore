@@ -1,0 +1,10 @@
+# Output & artifacts
+screenshots/
+node_modules/
+
+# Script kerja (tidak perlu masuk repo)
+screenshots.js
+
+# Dev tooling (screenshot script)
+package.json
+package-lock.json

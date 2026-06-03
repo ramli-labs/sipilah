@@ -271,14 +271,91 @@
   }
 
   /* ────────────────────────────────────────────────
-   * PATCH — window.SipML.train
-   * Membungkus fungsi training asli untuk menyisipkan
-   * ketiga fitur di atas tanpa ubah bundle.js
+   * FEATURE 3 — Click Interceptor (capture phase)
+   *
+   * Validasi foto dijalankan DI SINI, sebelum event
+   * mencapai React. Dengan cara ini:
+   * - Jika user cancel → modal tutup, React tidak tahu
+   *   ada click, UI tetap idle. Tidak ada error card.
+   * - Jika user proceed → bypass flag di-set, button
+   *   di-click ulang, React handle seperti biasa.
+   *
+   * Kenapa capture phase?
+   * React (v17+) pasang event listener di #root element.
+   * Listener di document-level capture phase berjalan
+   * LEBIH DULU (window→document→#root). Dengan
+   * stopImmediatePropagation() event tidak pernah
+   * sampai ke React.
    * ──────────────────────────────────────────────── */
-  function applyPatch() {
-    /* Tunggu hingga SipML & SipDB tersedia */
-    if (!window.SipML || typeof window.SipML.train !== 'function' || !window.SipDB) {
-      setTimeout(applyPatch, 400);
+  var _allowClickFor = null; /* Tombol yang boleh lolos ke React */
+
+  function installClickInterceptor() {
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('button') : null;
+      if (!btn) return;
+
+      /* Jika ini click hasil re-dispatch kita sendiri, biarkan lolos */
+      if (_allowClickFor === btn) {
+        _allowClickFor = null;
+        return;
+      }
+
+      /* Hanya intercept tombol "Latih AI" yang tidak disabled */
+      if (btn.disabled) return;
+      if (btn.textContent.indexOf('Latih AI') < 0) return;
+
+      /* Hentikan event — React tidak akan pernah tahu ada click ini */
+      e.stopImmediatePropagation();
+      e.preventDefault();
+
+      /* Cek jumlah foto secara async, lalu putuskan */
+      handleTrainClick(btn);
+    }, true /* capture = true */);
+  }
+
+  function handleTrainClick(btn) {
+    if (!window.SipDB) {
+      /* SipDB belum siap, lanjut saja */
+      proceedWithClick(btn);
+      return;
+    }
+
+    window.SipDB.getAll().then(function (photos) {
+      var total = Array.isArray(photos) ? photos.length : 0;
+
+      if (total > 0 && total < MIN_TOTAL_PHOTOS) {
+        /* Foto kurang → tampilkan modal */
+        showPhotoWarning(total).then(function (proceed) {
+          if (proceed) proceedWithClick(btn);
+          /* Jika cancel: tidak ada yang terjadi.
+             React tidak pernah masuk "running" state.
+             UI tetap idle. Tidak ada error card. ✓ */
+        });
+      } else {
+        /* Foto cukup → lanjut langsung */
+        proceedWithClick(btn);
+      }
+    }).catch(function () {
+      /* Gagal baca DB → amannya lanjut */
+      proceedWithClick(btn);
+    });
+  }
+
+  function proceedWithClick(btn) {
+    /* Tandai tombol ini boleh lolos ke React pada click berikutnya */
+    _allowClickFor = btn;
+    btn.click();
+  }
+
+  /* ────────────────────────────────────────────────
+   * PATCH — window.SipML.train
+   * Hanya untuk Feature 1 (timer) dan Feature 2 (akurasi).
+   * Feature 3 sudah ditangani di click interceptor di atas.
+   * ──────────────────────────────────────────────── */
+  function patchSipMLTrain() {
+    /* Tunggu hingga SipML tersedia */
+    if (!window.SipML || typeof window.SipML.train !== 'function') {
+      setTimeout(patchSipMLTrain, 400);
       return;
     }
 
@@ -291,27 +368,9 @@
     window.SipML.train = async function (callbacks) {
       callbacks = callbacks || {};
 
-      /* ── Feature 3: Cek jumlah foto ── */
-      var total = 0;
-      try {
-        var photos = await window.SipDB.getAll();
-        total = Array.isArray(photos) ? photos.length : 0;
-      } catch (_) { /* Jika gagal cek, lanjut saja */ }
-
-      if (total > 0 && total < MIN_TOTAL_PHOTOS) {
-        var proceed = await showPhotoWarning(total);
-        if (!proceed) {
-          /* User memilih "Tambah Foto" — batalkan training */
-          throw new Error(
-            'Pelatihan dibatalkan. Tambah lebih banyak foto untuk hasil yang lebih akurat.'
-          );
-        }
-      }
-
       /* ── Feature 1: Tampilkan timer ── */
       showTrainingTimer();
 
-      /* Bungkus callbacks agar fitur 1 & 2 aktif */
       var wrappedCallbacks = {
         onStatus: callbacks.onStatus
           ? function (status, progress) { callbacks.onStatus(status, progress); }
@@ -320,10 +379,10 @@
         onEpoch: callbacks.onEpoch,
 
         onDone: function (result) {
-          /* Feature 1: Sembunyikan timer saat selesai */
+          /* Feature 1: Sembunyikan timer */
           hideTrainingTimer();
 
-          /* Teruskan ke komponen React */
+          /* Teruskan ke React */
           if (callbacks.onDone) callbacks.onDone(result);
 
           /* Feature 2: Tampilkan penjelasan akurasi */
@@ -338,7 +397,7 @@
       try {
         return await origTrain(wrappedCallbacks);
       } catch (err) {
-        /* Pastikan timer disembunyikan walau error */
+        /* Sembunyikan timer walau ada error teknis */
         hideTrainingTimer();
         throw err;
       }
@@ -350,9 +409,13 @@
   /* ─── INIT ─── */
   injectStyles();
 
+  /* Click interceptor bisa dipasang segera (tidak butuh SipML) */
+  installClickInterceptor();
+
+  /* SipML patch butuh polling karena bundle.js load async */
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyPatch);
+    document.addEventListener('DOMContentLoaded', patchSipMLTrain);
   } else {
-    applyPatch();
+    patchSipMLTrain();
   }
 })();

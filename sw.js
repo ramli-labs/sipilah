@@ -4,7 +4,7 @@
  * pada fetch pertama saat "Latih Model" dibuka.
  */
 
-const CACHE_NAME = 'sipilah-v44-prod-2026';
+const CACHE_NAME = 'sipilah-v45-prod-2026';
 
 const APP_SHELL = [
   './',
@@ -12,6 +12,7 @@ const APP_SHELL = [
   './manifest.json',
   './js/sipilah-merge.js?v=audit-real-20260517',
   './js/bundle.js?v=audit-real-20260517',
+  './js/sipilah-enhancements.js?v=features-v1',
   './js/sipilah-3t-map.js?v=audit-real-20260517',
   './js/sipilah-showcase.js?v=audit-real-20260517',
   './js/sipilah-branding.js?v=audit-real-20260517',

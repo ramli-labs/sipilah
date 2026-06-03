@@ -1,0 +1,6 @@
+# Output & artifacts
+screenshots/
+node_modules/
+
+# Script kerja (tidak perlu masuk repo)
+screenshots.js

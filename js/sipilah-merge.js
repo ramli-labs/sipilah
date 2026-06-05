@@ -652,8 +652,64 @@
     );
   }
 
+  function isDatasetPageVisible() {
+    const buttons = document.querySelectorAll("button");
+    let tambahCount = 0;
+    for (const btn of buttons) {
+      if (btn.textContent && btn.textContent.trim().includes("Tambah Foto")) tambahCount++;
+    }
+    return tambahCount >= 3;
+  }
+
+  function mountDatasetImportBar() {
+    const existing = document.getElementById("sip-dataset-import-bar");
+    if (!isDatasetPageVisible()) {
+      if (existing) existing.remove();
+      return;
+    }
+    if (existing) return;
+
+    // Find the grid/container that holds the category cards
+    const buttons = Array.from(document.querySelectorAll("button"));
+    const tambahBtn = buttons.find((b) => b.textContent && b.textContent.trim().includes("Tambah Foto"));
+    if (!tambahBtn) return;
+    const cardGrid = tambahBtn.closest("[class*='grid']") || tambahBtn.closest("section") || tambahBtn.parentElement;
+    if (!cardGrid) return;
+    const insertAfter = cardGrid.closest("[class*='space-y']") || cardGrid.closest("main > div") || cardGrid.parentElement;
+    if (!insertAfter || !insertAfter.parentElement) return;
+
+    const bar = document.createElement("div");
+    bar.id = "sip-dataset-import-bar";
+    bar.style.cssText = "margin:12px 0;border:1px dashed #bbf7d0;border-radius:16px;background:linear-gradient(135deg,#f0fdf4,#f0f9ff);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-family:system-ui,sans-serif";
+    bar.innerHTML = `
+      <div style="flex:1;min-width:160px">
+        <div style="font-size:12px;font-weight:900;color:#15803d;letter-spacing:.06em;text-transform:uppercase">Gabungkan Dataset Kelompok</div>
+        <div style="font-size:12px;color:#475569;margin-top:2px">Import file JSON dari kelompok lain, foto akan ditambahkan ke dataset ini.</div>
+      </div>
+      <button id="sip-dataset-import-btn" style="border:0;border-radius:12px;background:#15803d;color:#fff;padding:10px 18px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap">+ Import dari Kelompok Lain</button>
+    `;
+    insertAfter.parentElement.insertBefore(bar, insertAfter.nextSibling);
+
+    document.getElementById("sip-dataset-import-btn").addEventListener("click", async () => {
+      const btn = document.getElementById("sip-dataset-import-btn");
+      if (btn) btn.disabled = true;
+      const imported = await importDataset();
+      if (imported) {
+        bar.style.borderColor = "#86efac";
+        const status = document.createElement("div");
+        status.style.cssText = "width:100%;font-size:12px;font-weight:700;color:#15803d;margin-top:4px";
+        status.textContent = "✓ Dataset berhasil digabungkan. Latih ulang AI di halaman Pelatihan.";
+        bar.appendChild(status);
+      }
+      if (btn) btn.disabled = false;
+    });
+  }
+
   function init() {
     injectStyles();
+    const observer = new MutationObserver(() => mountDatasetImportBar());
+    observer.observe(document.getElementById("root") || document.body, { childList: true, subtree: true });
+    mountDatasetImportBar();
   }
 
   window.SipMerge = { exportDataset, importDataset, reloadLatestVersion, resetProjectData, PageCollaboration };

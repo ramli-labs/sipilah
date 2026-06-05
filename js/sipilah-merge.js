@@ -306,53 +306,66 @@
       return false;
     }
 
-    const files = await pickDatasetFiles();
-    if (!files.length) return false;
+    let totalImported = 0;
 
-    const packages = [];
-    const errors = [];
+    while (true) {
+      const files = await pickDatasetFiles();
+      if (!files.length) break;
 
-    for (const file of files) {
-      try {
-        const text = await readFileText(file);
-        const data = JSON.parse(text);
-        const photos = validatePackage(data);
-        packages.push({ data, photos, fileName: file.name });
-      } catch (error) {
-        errors.push(`${file.name}: ${error && error.message ? error.message : "format tidak valid"}`);
+      const packages = [];
+      const errors = [];
+
+      for (const file of files) {
+        try {
+          const text = await readFileText(file);
+          const data = JSON.parse(text);
+          const photos = validatePackage(data);
+          packages.push({ data, photos });
+        } catch (error) {
+          errors.push(`${file.name}: ${error && error.message ? error.message : "format tidak valid"}`);
+        }
       }
-    }
 
-    if (errors.length) {
-      alert(`File berikut tidak dapat dibaca:\n${errors.join("\n")}`);
-      if (!packages.length) return false;
-    }
-
-    const totalPhotos = packages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
-    const groupNames = packages
-      .map((pkg) => pkg.data.identity && (pkg.data.identity.group || pkg.data.identity.school))
-      .filter(Boolean)
-      .join(", ");
-
-    const ok = confirm(
-      `Gabungkan ${totalPhotos} foto dari ${packages.length} paket${groupNames ? ` (${groupNames})` : ""} ke perangkat ini?\n\nModel lama akan ditandai perlu dilatih ulang.`
-    );
-    if (!ok) return false;
-
-    for (const pkg of packages) {
-      for (const photo of pkg.photos) {
-        await window.SipDB.savePhoto(photo.category, photo.dataUrl);
+      if (errors.length) {
+        alert(`File tidak dapat dibaca:\n${errors.join("\n")}`);
+        if (!packages.length) continue;
       }
-      rememberImportedContribution(pkg.data, pkg.photos);
+
+      const totalPhotos = packages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
+      const groupNames = packages
+        .map((pkg) => pkg.data.identity && (pkg.data.identity.group || pkg.data.identity.school))
+        .filter(Boolean)
+        .join(", ");
+
+      const ok = confirm(
+        `Gabungkan ${totalPhotos} foto${groupNames ? ` dari ${groupNames}` : ""}?`
+      );
+      if (!ok) {
+        if (totalImported === 0) return false;
+        break;
+      }
+
+      for (const pkg of packages) {
+        for (const photo of pkg.photos) {
+          await window.SipDB.savePhoto(photo.category, photo.dataUrl);
+        }
+        rememberImportedContribution(pkg.data, pkg.photos);
+        totalImported += pkg.photos.length;
+      }
+
+      const lanjut = confirm(
+        `Tersimpan! ${totalPhotos} foto dari ${groupNames || "kelompok ini"} berhasil ditambahkan.\n\nMau import kelompok lain? Tekan OK untuk pilih file berikutnya, atau Batal jika sudah selesai.`
+      );
+      if (!lanjut) break;
     }
+
+    if (totalImported === 0) return false;
 
     const counts = await window.SipDB.getCounts();
     await invalidateModel(counts);
 
     const totalNow = Object.values(counts).reduce((sum, value) => sum + value, 0);
-    alert(
-      `Berhasil menggabungkan ${totalPhotos} foto dari ${packages.length} kelompok.\n\nDataset sekarang: ${totalNow} foto. Bisa import kelompok lain lagi, atau latih ulang AI kalau sudah cukup.`
-    );
+    alert(`Selesai! Dataset gabungan sekarang: ${totalNow} foto.\n\nLatih ulang AI agar model memakai data terbaru.`);
     return true;
   }
 

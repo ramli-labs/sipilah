@@ -722,22 +722,22 @@
     if (!sessionStorage.getItem("sip_return_to_dataset")) return;
     sessionStorage.removeItem("sip_return_to_dataset");
 
-    function clickDatasetNav() {
-      const allBtns = Array.from(document.querySelectorAll("nav button, nav a, [role='navigation'] button, aside button, aside a"));
-      const datasetBtn = allBtns.find((el) => {
-        const t = el.textContent || "";
-        return t.trim() === "Dataset" || t.includes("Dataset Sampah") || t.includes("Kumpulkan");
+    let attempts = 0;
+
+    function tryClick() {
+      attempts++;
+      // Nav bisa collapsed (title="Dataset") atau expanded (textContent "Dataset")
+      const all = Array.from(document.querySelectorAll("button"));
+      const btn = all.find((el) => {
+        const title = el.getAttribute("title") || "";
+        const text = (el.textContent || "").trim();
+        return title === "Dataset" || text === "Dataset";
       });
-      if (datasetBtn) { datasetBtn.click(); return true; }
-      return false;
+      if (btn) { btn.click(); return; }
+      if (attempts < 40) setTimeout(tryClick, 150); // coba setiap 150ms sampai 6 detik
     }
 
-    if (!clickDatasetNav()) {
-      const nav = new MutationObserver(() => {
-        if (clickDatasetNav()) nav.disconnect();
-      });
-      nav.observe(document.body, { childList: true, subtree: true });
-    }
+    setTimeout(tryClick, 200);
   }
 
   function init() {

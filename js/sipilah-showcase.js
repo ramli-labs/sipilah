@@ -559,14 +559,13 @@
         try {
           const data = JSON.parse(e.target.result);
           if (data.sipilah !== "project-sync") throw new Error("File bukan file proyek SIPILAH.");
-          if (data.project) localStorage.setItem("sipilah_project_v1", JSON.stringify(data.project));
-          if (Array.isArray(data.photos) && data.photos.length) {
-            await window.SipDB.clearAll();
-            for (const photo of data.photos) {
-              await window.SipDB.savePhoto(photo.category, photo.dataUrl);
-            }
+          const photos = Array.isArray(data.photos) ? data.photos.filter((p) => p && p.category && p.dataUrl) : [];
+          for (const photo of photos) {
+            await window.SipDB.savePhoto(photo.category, photo.dataUrl);
           }
-          resolve({ photoCount: (data.photos || []).length });
+          const identity = (data.project && data.project.identity) || {};
+          const groupName = identity.group || identity.school || null;
+          resolve({ photoCount: photos.length, groupName });
         } catch (err) {
           reject(err);
         }
@@ -636,6 +635,16 @@
       document.getElementById("sip-sync-file-input").click();
     });
 
+    let importedCount = 0;
+    let importedGroups = [];
+
+    function resetImportBtn() {
+      const btn = document.getElementById("sip-sync-import-btn");
+      const fileInput = document.getElementById("sip-sync-file-input");
+      if (btn) btn.disabled = false;
+      if (fileInput) fileInput.value = "";
+    }
+
     document.getElementById("sip-sync-file-input").addEventListener("change", async (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
@@ -648,14 +657,36 @@
       status.textContent = "Sedang memproses…";
       try {
         const result = await importProject(file);
+        importedCount += result.photoCount;
+        if (result.groupName) importedGroups.push(result.groupName);
+
         status.style.color = "#15803d";
-        status.textContent = `✅ Berhasil! ${result.photoCount} foto diimpor. Halaman akan dimuat ulang…`;
-        setTimeout(() => { modal.remove(); location.reload(); }, 1800);
+        const groupLabel = result.groupName ? ` dari ${result.groupName}` : "";
+        const totalLabel = importedGroups.length > 1
+          ? ` · Total: ${importedCount} foto dari ${importedGroups.length} kelompok`
+          : "";
+        status.innerHTML = `✅ ${result.photoCount} foto${groupLabel} ditambahkan.${totalLabel}<br>
+          <span style="color:#475569;font-weight:400">Import kelompok lain atau klik Selesai.</span>`;
+
+        btn.textContent = "📤 Import Kelompok Lain…";
+        resetImportBtn();
+
+        const doneArea = document.getElementById("sip-sync-done-area");
+        if (!doneArea) {
+          const area = document.createElement("div");
+          area.id = "sip-sync-done-area";
+          area.style.cssText = "margin-top:10px";
+          area.innerHTML = `<button id="sip-sync-done-btn" style="border:0;border-radius:10px;background:#15803d;color:#fff;padding:9px 16px;font:800 12px system-ui,sans-serif;cursor:pointer;width:100%">✅ Selesai — Muat Ulang Halaman</button>`;
+          status.after(area);
+          document.getElementById("sip-sync-done-btn").addEventListener("click", () => {
+            modal.remove();
+            location.reload();
+          });
+        }
       } catch (err) {
         status.style.color = "#dc2626";
         status.textContent = `❌ ${err.message}`;
-        btn.textContent = "📤 Pilih File JSON…";
-        btn.disabled = false;
+        resetImportBtn();
       }
     });
   }

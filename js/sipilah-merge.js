@@ -700,13 +700,10 @@
       if (btn) btn.disabled = true;
       const imported = await importDataset();
       if (imported) {
-        bar.style.borderColor = "#86efac";
-        const status = document.createElement("div");
-        status.style.cssText = "width:100%;font-size:12px;font-weight:700;color:#15803d;margin-top:4px";
-        status.textContent = "✓ Dataset berhasil digabungkan. Latih ulang AI di halaman Pelatihan.";
-        bar.appendChild(status);
+        location.reload();
+      } else {
+        if (btn) btn.disabled = false;
       }
-      if (btn) btn.disabled = false;
     });
   }
 

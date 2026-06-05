@@ -241,12 +241,13 @@
     downloadJSON(`sipilah-dataset-${group}-${kelas}.json`, packageData);
   }
 
-  function pickDatasetFile() {
+  function pickDatasetFiles() {
     return new Promise((resolve) => {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "application/json,.json";
-      input.onchange = () => resolve(input.files && input.files[0]);
+      input.multiple = true;
+      input.onchange = () => resolve(input.files ? Array.from(input.files) : []);
       input.click();
     });
   }
@@ -284,40 +285,56 @@
       return;
     }
 
-    const file = await pickDatasetFile();
-    if (!file) return;
+    const files = await pickDatasetFiles();
+    if (!files.length) return;
 
-    try {
-      const text = await readFileText(file);
-      const data = JSON.parse(text);
-      const photos = validatePackage(data);
+    const packages = [];
+    const errors = [];
 
-      const origin = data.identity && (data.identity.group || data.identity.school)
-        ? ` dari ${data.identity.group || data.identity.school}`
-        : "";
-      const ok = confirm(
-        `Gabungkan ${photos.length} foto${origin} ke dataset perangkat ini?\n\nModel lama akan ditandai perlu dilatih ulang.`
-      );
-      if (!ok) return;
+    for (const file of files) {
+      try {
+        const text = await readFileText(file);
+        const data = JSON.parse(text);
+        const photos = validatePackage(data);
+        packages.push({ data, photos, fileName: file.name });
+      } catch (error) {
+        errors.push(`${file.name}: ${error && error.message ? error.message : "format tidak valid"}`);
+      }
+    }
 
-      for (const photo of photos) {
+    if (errors.length) {
+      alert(`File berikut tidak dapat dibaca:\n${errors.join("\n")}`);
+      if (!packages.length) return;
+    }
+
+    const totalPhotos = packages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
+    const groupNames = packages
+      .map((pkg) => pkg.data.identity && (pkg.data.identity.group || pkg.data.identity.school))
+      .filter(Boolean)
+      .join(", ");
+
+    const ok = confirm(
+      `Gabungkan ${totalPhotos} foto dari ${packages.length} paket dataset${groupNames ? ` (${groupNames})` : ""} ke perangkat ini?\n\nModel lama akan ditandai perlu dilatih ulang.`
+    );
+    if (!ok) return;
+
+    for (const pkg of packages) {
+      for (const photo of pkg.photos) {
         await window.SipDB.savePhoto(photo.category, photo.dataUrl);
       }
-
-      const counts = await window.SipDB.getCounts();
-      rememberImportedContribution(data, photos);
-      await invalidateModel(counts);
-
-      alert(
-        `Berhasil menggabungkan ${photos.length} foto.\n\nDataset gabungan sekarang: ${Object.values(counts).reduce(
-          (sum, value) => sum + value,
-          0
-        )} foto. Latih ulang AI agar model memakai data gabungan.`
-      );
-      location.reload();
-    } catch (error) {
-      alert(error && error.message ? error.message : "Gagal mengimpor paket dataset.");
+      rememberImportedContribution(pkg.data, pkg.photos);
     }
+
+    const counts = await window.SipDB.getCounts();
+    await invalidateModel(counts);
+
+    alert(
+      `Berhasil menggabungkan ${totalPhotos} foto dari ${packages.length} kelompok.\n\nDataset gabungan sekarang: ${Object.values(counts).reduce(
+        (sum, value) => sum + value,
+        0
+      )} foto. Latih ulang AI agar model memakai data gabungan.`
+    );
+    location.reload();
   }
 
   function injectStyles() {

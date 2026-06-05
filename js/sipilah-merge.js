@@ -688,12 +688,20 @@
     bar.style.cssText = "margin:12px 0;border:1px dashed #bbf7d0;border-radius:16px;background:linear-gradient(135deg,#f0fdf4,#f0f9ff);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-family:system-ui,sans-serif";
     bar.innerHTML = `
       <div style="flex:1;min-width:160px">
-        <div style="font-size:12px;font-weight:900;color:#15803d;letter-spacing:.06em;text-transform:uppercase">Gabungkan Dataset Kelompok</div>
-        <div style="font-size:12px;color:#475569;margin-top:2px">Import file JSON dari kelompok lain, foto akan ditambahkan ke dataset ini.</div>
+        <div style="font-size:12px;font-weight:900;color:#15803d;letter-spacing:.06em;text-transform:uppercase">Sinkron Dataset Kelompok</div>
+        <div style="font-size:12px;color:#475569;margin-top:2px">Ekspor paket JSON untuk dikirim ke kelompok lain, atau import JSON dari kelompok lain.</div>
       </div>
+      <button id="sip-dataset-export-btn" style="border:1px solid #bbf7d0;border-radius:12px;background:#fff;color:#15803d;padding:10px 18px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap">Ekspor JSON</button>
       <button id="sip-dataset-import-btn" style="border:0;border-radius:12px;background:#15803d;color:#fff;padding:10px 18px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap">+ Import dari Kelompok Lain</button>
     `;
     insertAfter.parentElement.insertBefore(bar, insertAfter.nextSibling);
+
+    document.getElementById("sip-dataset-export-btn").addEventListener("click", async () => {
+      const btn = document.getElementById("sip-dataset-export-btn");
+      if (btn) { btn.disabled = true; btn.textContent = "Menyiapkan…"; }
+      await exportDataset();
+      if (btn) { btn.disabled = false; btn.textContent = "Ekspor JSON"; }
+    });
 
     document.getElementById("sip-dataset-import-btn").addEventListener("click", async () => {
       const btn = document.getElementById("sip-dataset-import-btn");

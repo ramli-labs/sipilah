@@ -704,11 +704,8 @@
           const doneBtn = document.createElement("button");
           doneBtn.id = "sip-dataset-done-btn";
           doneBtn.style.cssText = "border:0;border-radius:12px;background:#0f172a;color:#fff;padding:10px 18px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap";
-          doneBtn.textContent = "Selesai, Muat Ulang";
-          doneBtn.addEventListener("click", () => {
-            sessionStorage.setItem("sip_return_to_dataset", "1");
-            location.reload();
-          });
+          doneBtn.textContent = "Selesai & Refresh Dataset";
+          doneBtn.addEventListener("click", refreshDatasetPage);
           bar.appendChild(doneBtn);
         }
         if (importBtn) { importBtn.disabled = false; importBtn.textContent = "+ Import Kelompok Lain"; }
@@ -718,31 +715,28 @@
     });
   }
 
-  function tryNavigateToDataset() {
-    if (!sessionStorage.getItem("sip_return_to_dataset")) return;
-    sessionStorage.removeItem("sip_return_to_dataset");
+  function findNavBtn(label) {
+    return Array.from(document.querySelectorAll("button")).find((el) => {
+      return el.getAttribute("title") === label || (el.textContent || "").trim() === label;
+    });
+  }
 
-    let attempts = 0;
-
-    function tryClick() {
-      attempts++;
-      // Nav bisa collapsed (title="Dataset") atau expanded (textContent "Dataset")
-      const all = Array.from(document.querySelectorAll("button"));
-      const btn = all.find((el) => {
-        const title = el.getAttribute("title") || "";
-        const text = (el.textContent || "").trim();
-        return title === "Dataset" || text === "Dataset";
-      });
-      if (btn) { btn.click(); return; }
-      if (attempts < 40) setTimeout(tryClick, 150); // coba setiap 150ms sampai 6 detik
+  function refreshDatasetPage() {
+    // Navigasi ke halaman lain dulu agar React unmount Dataset component,
+    // lalu kembali ke Dataset agar remount dengan data terbaru dari IndexedDB.
+    const datasetBtn = findNavBtn("Dataset");
+    const berandaBtn = findNavBtn("Beranda");
+    if (!datasetBtn) return;
+    if (berandaBtn) {
+      berandaBtn.click();
+      setTimeout(() => datasetBtn.click(), 200);
+    } else {
+      datasetBtn.click();
     }
-
-    setTimeout(tryClick, 200);
   }
 
   function init() {
     injectStyles();
-    tryNavigateToDataset();
     const observer = new MutationObserver(() => mountDatasetImportBar());
     observer.observe(document.getElementById("root") || document.body, { childList: true, subtree: true });
     mountDatasetImportBar();

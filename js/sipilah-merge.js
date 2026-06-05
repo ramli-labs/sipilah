@@ -247,7 +247,28 @@
       input.type = "file";
       input.accept = "application/json,.json";
       input.multiple = true;
-      input.onchange = () => resolve(input.files ? Array.from(input.files) : []);
+      input.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
+      document.body.appendChild(input);
+
+      let settled = false;
+      function done(files) {
+        if (settled) return;
+        settled = true;
+        document.body.removeChild(input);
+        resolve(files);
+      }
+
+      input.onchange = () => done(input.files ? Array.from(input.files) : []);
+
+      // Detect cancel: window regains focus without onchange firing
+      function onWindowFocus() {
+        setTimeout(() => {
+          if (!settled) done([]);
+        }, 400);
+        window.removeEventListener("focus", onWindowFocus);
+      }
+      window.addEventListener("focus", onWindowFocus);
+
       input.click();
     });
   }

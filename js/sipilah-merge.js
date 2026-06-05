@@ -722,8 +722,14 @@
   function refreshDatasetPage() {
     const datasetBtn = findNavBtn("Dataset");
     const berandaBtn = findNavBtn("Beranda");
-    if (berandaBtn) berandaBtn.click();
-    setTimeout(() => { if (datasetBtn) datasetBtn.click(); }, 250);
+    if (berandaBtn && datasetBtn) {
+      // Klik Beranda lalu Dataset dalam satu frame — React update state dua kali
+      // sebelum browser sempat paint, sehingga Beranda tidak pernah terlihat.
+      berandaBtn.click();
+      requestAnimationFrame(() => datasetBtn.click());
+    } else if (datasetBtn) {
+      datasetBtn.click();
+    }
   }
 
   function init() {

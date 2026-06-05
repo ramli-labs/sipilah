@@ -282,11 +282,11 @@
   async function importDataset() {
     if (!window.SipDB) {
       alert("Database SIPILAH belum siap. Muat ulang halaman lalu coba lagi.");
-      return;
+      return false;
     }
 
     const files = await pickDatasetFiles();
-    if (!files.length) return;
+    if (!files.length) return false;
 
     const packages = [];
     const errors = [];
@@ -304,7 +304,7 @@
 
     if (errors.length) {
       alert(`File berikut tidak dapat dibaca:\n${errors.join("\n")}`);
-      if (!packages.length) return;
+      if (!packages.length) return false;
     }
 
     const totalPhotos = packages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
@@ -314,9 +314,9 @@
       .join(", ");
 
     const ok = confirm(
-      `Gabungkan ${totalPhotos} foto dari ${packages.length} paket dataset${groupNames ? ` (${groupNames})` : ""} ke perangkat ini?\n\nModel lama akan ditandai perlu dilatih ulang.`
+      `Gabungkan ${totalPhotos} foto dari ${packages.length} paket${groupNames ? ` (${groupNames})` : ""} ke perangkat ini?\n\nModel lama akan ditandai perlu dilatih ulang.`
     );
-    if (!ok) return;
+    if (!ok) return false;
 
     for (const pkg of packages) {
       for (const photo of pkg.photos) {
@@ -328,13 +328,19 @@
     const counts = await window.SipDB.getCounts();
     await invalidateModel(counts);
 
+    const totalNow = Object.values(counts).reduce((sum, value) => sum + value, 0);
     alert(
-      `Berhasil menggabungkan ${totalPhotos} foto dari ${packages.length} kelompok.\n\nDataset gabungan sekarang: ${Object.values(counts).reduce(
-        (sum, value) => sum + value,
-        0
-      )} foto. Latih ulang AI agar model memakai data gabungan.`
+      `Berhasil menggabungkan ${totalPhotos} foto dari ${packages.length} kelompok.\n\nDataset sekarang: ${totalNow} foto. Bisa import kelompok lain lagi, atau latih ulang AI kalau sudah cukup.`
     );
-    location.reload();
+    return true;
+  }
+
+  function refreshDashboardInCard(card) {
+    const existing = card.querySelector(".sip-merge-dashboard");
+    if (!existing) return;
+    const tmp = document.createElement("div");
+    tmp.innerHTML = renderDashboard();
+    existing.replaceWith(tmp.firstElementChild);
   }
 
   function injectStyles() {
@@ -505,18 +511,23 @@
       ${renderDashboard()}
     `;
 
-    card.addEventListener("click", (event) => {
+    card.addEventListener("click", async (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
-      if (target.matches("[data-sip-merge-export]")) exportDataset();
-      if (target.matches("[data-sip-merge-import]")) importDataset();
+      if (target.matches("[data-sip-merge-export]")) {
+        await exportDataset();
+        refreshDashboardInCard(card);
+      }
+      if (target.matches("[data-sip-merge-import]")) {
+        const imported = await importDataset();
+        if (imported) refreshDashboardInCard(card);
+      }
       if (target.matches("[data-sip-reload-latest]")) reloadLatestVersion();
       if (target.matches("[data-sip-reset-project]")) resetProjectData();
       if (target.matches("[data-sip-merge-reset]")) {
         if (confirm("Hapus riwayat kontribusi dashboard? Dataset foto tidak ikut terhapus.")) {
           writeContributions([]);
-          card.innerHTML = card.innerHTML.replace(/<div class="sip-merge-dashboard">[\s\S]*<\/div>\s*$/i, renderDashboard());
-          location.reload();
+          refreshDashboardInCard(card);
         }
       }
     });
@@ -540,7 +551,10 @@
         await exportDataset();
         refresh();
       }
-      if (target.matches("[data-sip-merge-import]")) await importDataset();
+      if (target.matches("[data-sip-merge-import]")) {
+        const imported = await importDataset();
+        if (imported) refresh();
+      }
       if (target.matches("[data-sip-merge-reset]")) {
         if (confirm("Hapus riwayat kontribusi dashboard? Dataset foto tidak ikut terhapus.")) {
           writeContributions([]);

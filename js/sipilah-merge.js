@@ -305,73 +305,54 @@
   async function importDataset() {
     if (!window.SipDB) {
       alert("Database SIPILAH belum siap. Muat ulang halaman lalu coba lagi.");
-      return false;
+      return null;
     }
 
-    let totalImported = 0;
+    const files = await pickDatasetFiles();
+    if (!files.length) return null;
 
-    while (true) {
-      const files = await pickDatasetFiles();
-      if (!files.length) break;
+    const packages = [];
+    const errors = [];
 
-      const packages = [];
-      const errors = [];
-
-      for (const file of files) {
-        try {
-          const text = await readFileText(file);
-          const data = JSON.parse(text);
-          const photos = validatePackage(data);
-          packages.push({ data, photos });
-        } catch (error) {
-          errors.push(`${file.name}: ${error && error.message ? error.message : "format tidak valid"}`);
-        }
+    for (const file of files) {
+      try {
+        const text = await readFileText(file);
+        const data = JSON.parse(text);
+        const photos = validatePackage(data);
+        packages.push({ data, photos });
+      } catch (error) {
+        errors.push(`${file.name}: ${error && error.message ? error.message : "format tidak valid"}`);
       }
-
-      if (errors.length) {
-        alert(`File tidak dapat dibaca:\n${errors.join("\n")}`);
-        if (!packages.length) continue;
-      }
-
-      const totalPhotos = packages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
-      const groupNames = packages
-        .map((pkg) => {
-          const id = (pkg.data.identity) || (pkg.data.project && pkg.data.project.identity) || {};
-          return id.group || id.school || null;
-        })
-        .filter(Boolean)
-        .join(", ");
-
-      const ok = confirm(
-        `Gabungkan ${totalPhotos} foto${groupNames ? ` dari ${groupNames}` : ""}?`
-      );
-      if (!ok) {
-        if (totalImported === 0) return false;
-        break;
-      }
-
-      for (const pkg of packages) {
-        for (const photo of pkg.photos) {
-          await window.SipDB.savePhoto(photo.category, photo.dataUrl);
-        }
-        rememberImportedContribution(pkg.data, pkg.photos);
-        totalImported += pkg.photos.length;
-      }
-
-      const lanjut = confirm(
-        `Tersimpan! ${totalPhotos} foto dari ${groupNames || "kelompok ini"} berhasil ditambahkan.\n\nMau import kelompok lain? Tekan OK untuk pilih file berikutnya, atau Batal jika sudah selesai.`
-      );
-      if (!lanjut) break;
     }
 
-    if (totalImported === 0) return false;
+    if (errors.length) {
+      alert(`File tidak dapat dibaca:\n${errors.join("\n")}`);
+      if (!packages.length) return null;
+    }
+
+    const totalPhotos = packages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
+    const groupNames = packages
+      .map((pkg) => {
+        const id = (pkg.data.identity) || (pkg.data.project && pkg.data.project.identity) || {};
+        return id.group || id.school || null;
+      })
+      .filter(Boolean)
+      .join(", ");
+
+    const ok = confirm(`Gabungkan ${totalPhotos} foto${groupNames ? ` dari ${groupNames}` : ""}?`);
+    if (!ok) return null;
+
+    for (const pkg of packages) {
+      for (const photo of pkg.photos) {
+        await window.SipDB.savePhoto(photo.category, photo.dataUrl);
+      }
+      rememberImportedContribution(pkg.data, pkg.photos);
+    }
 
     const counts = await window.SipDB.getCounts();
     await invalidateModel(counts);
 
-    const totalNow = Object.values(counts).reduce((sum, value) => sum + value, 0);
-    alert(`Selesai! Dataset gabungan sekarang: ${totalNow} foto.\n\nLatih ulang AI agar model memakai data terbaru.`);
-    return true;
+    return { count: totalPhotos, groups: groupNames };
   }
 
   function refreshDashboardInCard(card) {
@@ -558,8 +539,8 @@
         refreshDashboardInCard(card);
       }
       if (target.matches("[data-sip-merge-import]")) {
-        const imported = await importDataset();
-        if (imported) refreshDashboardInCard(card);
+        const result = await importDataset();
+        if (result) refreshDashboardInCard(card);
       }
       if (target.matches("[data-sip-reload-latest]")) reloadLatestVersion();
       if (target.matches("[data-sip-reset-project]")) resetProjectData();
@@ -591,8 +572,8 @@
         refresh();
       }
       if (target.matches("[data-sip-merge-import]")) {
-        const imported = await importDataset();
-        if (imported) refresh();
+        const result = await importDataset();
+        if (result) refresh();
       }
       if (target.matches("[data-sip-merge-reset]")) {
         if (confirm("Hapus riwayat kontribusi dashboard? Dataset foto tidak ikut terhapus.")) {
@@ -689,12 +670,14 @@
     bar.innerHTML = `
       <div style="flex:1;min-width:160px">
         <div style="font-size:12px;font-weight:900;color:#15803d;letter-spacing:.06em;text-transform:uppercase">Sinkron Dataset Kelompok</div>
-        <div style="font-size:12px;color:#475569;margin-top:2px">Ekspor paket JSON untuk dikirim ke kelompok lain, atau import JSON dari kelompok lain.</div>
+        <div id="sip-bar-desc" style="font-size:12px;color:#475569;margin-top:2px">Ekspor paket JSON untuk dikirim ke kelompok lain, atau import JSON dari kelompok lain.</div>
       </div>
       <button id="sip-dataset-export-btn" style="border:1px solid #bbf7d0;border-radius:12px;background:#fff;color:#15803d;padding:10px 18px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap">Ekspor JSON</button>
       <button id="sip-dataset-import-btn" style="border:0;border-radius:12px;background:#15803d;color:#fff;padding:10px 18px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap">+ Import dari Kelompok Lain</button>
     `;
     insertAfter.parentElement.insertBefore(bar, insertAfter.nextSibling);
+
+    let totalBarImported = 0;
 
     document.getElementById("sip-dataset-export-btn").addEventListener("click", async () => {
       const btn = document.getElementById("sip-dataset-export-btn");
@@ -704,14 +687,33 @@
     });
 
     document.getElementById("sip-dataset-import-btn").addEventListener("click", async () => {
-      const btn = document.getElementById("sip-dataset-import-btn");
-      if (btn) btn.disabled = true;
-      const imported = await importDataset();
-      if (imported) {
-        sessionStorage.setItem("sip_return_to_dataset", "1");
-        location.reload();
+      const importBtn = document.getElementById("sip-dataset-import-btn");
+      if (importBtn) { importBtn.disabled = true; importBtn.textContent = "Memproses…"; }
+
+      const result = await importDataset();
+
+      if (result) {
+        totalBarImported += result.count;
+        const label = bar.querySelector("#sip-bar-desc");
+        if (label) {
+          label.style.color = "#15803d";
+          label.style.fontWeight = "700";
+          label.textContent = `✓ ${totalBarImported} foto tersimpan${result.groups ? ` (${result.groups})` : ""}. Import kelompok lain atau klik Selesai.`;
+        }
+        if (!document.getElementById("sip-dataset-done-btn")) {
+          const doneBtn = document.createElement("button");
+          doneBtn.id = "sip-dataset-done-btn";
+          doneBtn.style.cssText = "border:0;border-radius:12px;background:#0f172a;color:#fff;padding:10px 18px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap";
+          doneBtn.textContent = "Selesai, Muat Ulang";
+          doneBtn.addEventListener("click", () => {
+            sessionStorage.setItem("sip_return_to_dataset", "1");
+            location.reload();
+          });
+          bar.appendChild(doneBtn);
+        }
+        if (importBtn) { importBtn.disabled = false; importBtn.textContent = "+ Import Kelompok Lain"; }
       } else {
-        if (btn) btn.disabled = false;
+        if (importBtn) { importBtn.disabled = false; importBtn.textContent = "+ Import dari Kelompok Lain"; }
       }
     });
   }

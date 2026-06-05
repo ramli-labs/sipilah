@@ -20,7 +20,7 @@
   /* ─── CSS UNTUK SEMUA FITUR ─── */
   var STYLES = [
     /* ── Shared ── */
-    '#sip-eh-warn-overlay,#sip-eh-train-timer,#sip-eh-acc-toast{',
+    '#sip-eh-warn-overlay,#sip-eh-train-timer,#sip-eh-acc-toast,#sip-live-test-card{',
     '  box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif;',
     '}',
 
@@ -111,6 +111,40 @@
     '}',
     '.sip-eh-toast-close:hover{background:#f8fafc;color:#64748b}',
 
+    /* Live camera prediction for Uji Model */
+    '#sip-live-test-card{',
+    '  border:1px solid #bbf7d0;border-radius:18px;background:linear-gradient(135deg,#f0fdf4,#f8fafc);',
+    '  padding:16px 18px;margin:0 0 20px;box-shadow:0 10px 28px rgba(15,23,42,.06);',
+    '}',
+    '.sip-live-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}',
+    '.sip-live-kicker{font-size:11px;font-weight:900;color:#15803d;letter-spacing:.08em;text-transform:uppercase}',
+    '.sip-live-title{font-size:18px;font-weight:900;color:#0f172a;margin-top:2px}',
+    '.sip-live-sub{font-size:13px;color:#475569;margin-top:3px;line-height:1.45}',
+    '.sip-live-btn{border:0;border-radius:13px;background:#15803d;color:white;padding:11px 16px;font-weight:850;font-size:13px;cursor:pointer;white-space:nowrap}',
+    '.sip-live-btn:hover{background:#166534}',
+    '.sip-live-btn:disabled{opacity:.55;cursor:not-allowed}',
+    '.sip-live-btn.sip-live-stop{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}',
+    '.sip-live-actions{display:flex;gap:8px;flex-wrap:wrap}',
+    '.sip-live-actions .sip-live-btn{padding-inline:13px}',
+    '.sip-live-btn.sip-live-secondary{background:#fff;color:#15803d;border:1px solid #bbf7d0}',
+    '.sip-live-btn.sip-live-secondary:hover{background:#f0fdf4}',
+    '.sip-live-body{display:grid;grid-template-columns:minmax(220px,.9fr) 1.1fr;gap:14px;margin-top:14px;align-items:stretch}',
+    '.sip-live-video-wrap{position:relative;overflow:hidden;border-radius:16px;background:#0f172a;aspect-ratio:4/3;min-height:190px}',
+    '.sip-live-video-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}',
+    '.sip-live-video-wrap img{width:100%;height:100%;object-fit:cover}',
+    '.sip-live-frame{position:absolute;inset:12%;border:2px dashed rgba(255,255,255,.72);border-radius:18px;pointer-events:none}',
+    '.sip-live-status{position:absolute;left:10px;right:10px;bottom:10px;border-radius:12px;background:rgba(15,23,42,.72);color:white;padding:8px 10px;font-size:12px;font-weight:750;text-align:center}',
+    '.sip-live-result{border:1px solid #e2e8f0;background:rgba(255,255,255,.78);border-radius:16px;padding:14px;min-height:190px}',
+    '.sip-live-pred-label{font-size:32px;line-height:1.05;font-weight:950;color:#15803d;margin-top:6px}',
+    '.sip-live-confidence{font-size:13px;color:#475569;margin-top:4px}',
+    '.sip-live-bars{display:flex;flex-direction:column;gap:8px;margin-top:14px}',
+    '.sip-live-row{display:grid;grid-template-columns:64px 1fr 40px;gap:8px;align-items:center;font-size:12px}',
+    '.sip-live-cat{font-weight:850;text-align:right}',
+    '.sip-live-track{height:9px;border-radius:999px;background:#e2e8f0;overflow:hidden}',
+    '.sip-live-fill{height:100%;border-radius:999px;width:0;transition:width .18s ease}',
+    '.sip-live-prob{font-weight:850;color:#334155;text-align:right;font-variant-numeric:tabular-nums}',
+    '.sip-live-note{font-size:12px;color:#64748b;line-height:1.45;margin-top:10px}',
+
     /* ── Keyframes ── */
     '@keyframes sip-fade-in{from{opacity:0}to{opacity:1}}',
     '@keyframes sip-pop-in{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}',
@@ -132,6 +166,9 @@
     '  .sip-eh-warn-box{padding:22px 16px}',
     '  .sip-eh-warn-title{font-size:17px}',
     '  #sip-eh-train-timer{font-size:13px;padding:10px 18px}',
+    '  .sip-live-body{grid-template-columns:1fr}',
+    '  .sip-live-head{align-items:flex-start}',
+    '  .sip-live-btn{width:100%}',
     '}',
   ].join('');
 
@@ -348,6 +385,347 @@
   }
 
   /* ────────────────────────────────────────────────
+   * FEATURE 4 — Kamera Live untuk Uji Model
+   * Menggunakan window.SipML.predict(video) agar hasilnya sama
+   * dengan alur uji foto biasa, tetapi berjalan realtime.
+   * ──────────────────────────────────────────────── */
+  var LIVE_COLORS = {
+    Plastik: '#0ea5e9',
+    Kertas: '#f59e0b',
+    Organik: '#10b981',
+    Residu: '#64748b',
+  };
+  var _liveStream = null;
+  var _liveRunning = false;
+  var _livePredicting = false;
+  var _liveLoopId = null;
+  var _liveObjectUrl = null;
+
+  function isTestPageVisible() {
+    var text = document.body ? document.body.innerText || '' : '';
+    return text.indexOf('Uji Model dengan Foto Baru') >= 0 && text.indexOf('Foto Uji') >= 0;
+  }
+
+  function stopLiveCamera() {
+    _liveRunning = false;
+    if (_liveLoopId) {
+      clearTimeout(_liveLoopId);
+      _liveLoopId = null;
+    }
+    if (_liveStream) {
+      _liveStream.getTracks().forEach(function (track) { track.stop(); });
+      _liveStream = null;
+    }
+    revokeLiveObjectUrl();
+
+    var card = document.getElementById('sip-live-test-card');
+    if (!card) return;
+    card.classList.remove('sip-live-active');
+    var video = card.querySelector('video');
+    if (video) video.srcObject = null;
+    var preview = card.querySelector('#sip-live-still');
+    if (preview) {
+      preview.removeAttribute('src');
+      preview.hidden = true;
+    }
+    if (video) video.hidden = false;
+    var btn = card.querySelector('#sip-live-start');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Mulai Kamera Live';
+      btn.classList.remove('sip-live-stop');
+    }
+    setLiveStatus('Kamera berhenti. Arahkan objek lalu mulai lagi untuk menebak realtime.');
+  }
+
+  function setLiveStatus(message) {
+    var el = document.getElementById('sip-live-status');
+    if (el) el.textContent = message;
+  }
+
+  function revokeLiveObjectUrl() {
+    if (_liveObjectUrl) {
+      URL.revokeObjectURL(_liveObjectUrl);
+      _liveObjectUrl = null;
+    }
+  }
+
+  function renderLivePrediction(result) {
+    var card = document.getElementById('sip-live-test-card');
+    if (!card || !result) return;
+
+    var label = card.querySelector('#sip-live-label');
+    var confidence = card.querySelector('#sip-live-confidence');
+    var bars = card.querySelector('#sip-live-bars');
+    var color = LIVE_COLORS[result.label] || '#15803d';
+
+    if (label) {
+      label.textContent = result.label || '-';
+      label.style.color = color;
+    }
+    if (confidence) {
+      confidence.textContent = 'Keyakinan ' + Math.round(result.confidence || 0) + '%';
+    }
+    if (bars && Array.isArray(result.allCategories)) {
+      bars.innerHTML = result.allCategories
+        .slice()
+        .sort(function (a, b) { return (b.prob || 0) - (a.prob || 0); })
+        .map(function (item) {
+          var itemColor = item.color || LIVE_COLORS[item.cat] || '#15803d';
+          var prob = Math.max(0, Math.min(100, Math.round(item.prob || 0)));
+          return (
+            '<div class="sip-live-row">' +
+              '<div class="sip-live-cat" style="color:' + itemColor + '">' + item.cat + '</div>' +
+              '<div class="sip-live-track"><div class="sip-live-fill" style="width:' + prob + '%;background:' + itemColor + '"></div></div>' +
+              '<div class="sip-live-prob">' + prob + '%</div>' +
+            '</div>'
+          );
+        })
+        .join('');
+    }
+  }
+
+  function runLivePredictionLoop(video) {
+    if (!_liveRunning) return;
+    if (!video || !video.videoWidth) {
+      _liveLoopId = setTimeout(function () { runLivePredictionLoop(video); }, 250);
+      return;
+    }
+    if (_livePredicting) {
+      _liveLoopId = setTimeout(function () { runLivePredictionLoop(video); }, 250);
+      return;
+    }
+
+    _livePredicting = true;
+    window.SipML.predict(video)
+      .then(function (result) {
+        renderLivePrediction(result);
+        setLiveStatus('Live: arahkan objek sampah ke tengah kamera.');
+      })
+      .catch(function (error) {
+        setLiveStatus(error && error.message ? error.message : 'Prediksi live gagal.');
+      })
+      .finally(function () {
+        _livePredicting = false;
+        if (_liveRunning) {
+          _liveLoopId = setTimeout(function () { runLivePredictionLoop(video); }, 650);
+        }
+      });
+  }
+
+  function openMobileImagePicker(source) {
+    var card = document.getElementById('sip-live-test-card');
+    if (!card) return;
+    if (!window.SipML || typeof window.SipML.predict !== 'function') {
+      setLiveStatus('Model AI belum siap. Muat ulang halaman atau latih model dulu.');
+      return;
+    }
+
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (source === 'camera') input.setAttribute('capture', 'environment');
+    input.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:.01;z-index:-1';
+    document.body.appendChild(input);
+
+    var cleaned = false;
+    function cleanup() {
+      if (cleaned) return;
+      cleaned = true;
+      setTimeout(function () {
+        if (input.parentNode) input.parentNode.removeChild(input);
+      }, 400);
+      window.removeEventListener('focus', onFocus);
+    }
+    function onFocus() {
+      setTimeout(cleanup, 1200);
+    }
+    window.addEventListener('focus', onFocus);
+
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      cleanup();
+      if (!file) {
+        setLiveStatus('Tidak ada foto dipilih.');
+        return;
+      }
+      predictPickedImage(file, card);
+    }, { once: true });
+
+    input.click();
+  }
+
+  function predictPickedImage(file, card) {
+    stopLiveCamera();
+    setLiveStatus('Membaca foto dan menjalankan prediksi...');
+
+    revokeLiveObjectUrl();
+    _liveObjectUrl = URL.createObjectURL(file);
+    var video = card.querySelector('video');
+    var preview = card.querySelector('#sip-live-still');
+    if (video) video.hidden = true;
+    if (preview) {
+      preview.src = _liveObjectUrl;
+      preview.hidden = false;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function (event) {
+      var dataUrl = String(event.target && event.target.result || '');
+      var source = Promise.resolve(dataUrl);
+      if (window.SipDBHelpers && typeof window.SipDBHelpers.resizeDataUrl === 'function') {
+        source = window.SipDBHelpers.resizeDataUrl(dataUrl, 480, 0.84);
+      }
+      source
+        .then(function (resized) {
+          return window.SipML.predict(resized);
+        })
+        .then(function (result) {
+          renderLivePrediction(result);
+          setLiveStatus('Prediksi foto selesai. Pilih foto lain atau mulai kamera live.');
+        })
+        .catch(function (error) {
+          setLiveStatus(error && error.message ? error.message : 'Gagal memprediksi foto.');
+        });
+    };
+    reader.onerror = function () {
+      setLiveStatus('Gagal membaca foto dari perangkat.');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function startLiveCamera(card) {
+    var btn = card.querySelector('#sip-live-start');
+    if (_liveRunning) {
+      stopLiveCamera();
+      return;
+    }
+    if (!window.SipML || typeof window.SipML.predict !== 'function') {
+      setLiveStatus('Model AI belum siap. Muat ulang halaman atau latih model dulu.');
+      return;
+    }
+    if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      setLiveStatus('Kamera live di HP butuh HTTPS. Pakai tombol Kamera HP atau Galeri/Folder di kartu ini.');
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setLiveStatus('Browser belum mendukung kamera live. Pakai tombol Kamera HP atau Galeri/Folder.');
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Menyiapkan kamera...';
+    }
+    setLiveStatus('Memeriksa model dan izin kamera...');
+
+    Promise.resolve(window.SipML.hasModel ? window.SipML.hasModel() : true)
+      .then(function (ready) {
+        if (!ready) throw new Error('Model belum dilatih. Buka Latih Model dulu.');
+        return navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 960 } },
+          audio: false,
+        });
+      })
+      .then(function (stream) {
+        _liveStream = stream;
+        _liveRunning = true;
+        var video = card.querySelector('video');
+        if (video) {
+          video.srcObject = stream;
+          video.play().catch(function () {});
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Stop Kamera';
+          btn.classList.add('sip-live-stop');
+        }
+        setLiveStatus('Kamera aktif. Memuat prediksi pertama...');
+        runLivePredictionLoop(video);
+      })
+      .catch(function (error) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Mulai Kamera Live';
+          btn.classList.remove('sip-live-stop');
+        }
+        var message = error && error.name === 'NotAllowedError'
+          ? 'Izin kamera ditolak. Izinkan kamera di browser atau gunakan foto biasa.'
+          : (error && error.message ? error.message : 'Kamera tidak tersedia.');
+        setLiveStatus(message);
+      });
+  }
+
+  function mountLiveTestCard() {
+    var existing = document.getElementById('sip-live-test-card');
+    if (!isTestPageVisible()) {
+      stopLiveCamera();
+      if (existing) existing.remove();
+      return;
+    }
+    if (existing) return;
+
+    var fotoTitle = Array.from(document.querySelectorAll('div')).find(function (el) {
+      return el.textContent && el.textContent.trim() === 'Foto Uji';
+    });
+    var grid = fotoTitle ? fotoTitle.closest("[class*='grid']") : null;
+    var parent = grid && grid.parentElement ? grid.parentElement : null;
+    if (!parent || !grid) return;
+
+    var card = document.createElement('div');
+    card.id = 'sip-live-test-card';
+    card.innerHTML =
+      '<div class="sip-live-head">' +
+        '<div>' +
+          '<div class="sip-live-kicker">Mode Teachable Machine</div>' +
+          '<div class="sip-live-title">Kamera Live: AI menebak langsung</div>' +
+          '<div class="sip-live-sub">Arahkan kamera ke sampah. Jika HP memblokir kamera live, pakai Kamera HP atau Galeri/Folder.</div>' +
+        '</div>' +
+        '<div class="sip-live-actions">' +
+          '<button id="sip-live-start" class="sip-live-btn">Mulai Kamera Live</button>' +
+          '<button id="sip-live-camera-file" class="sip-live-btn sip-live-secondary">Kamera HP</button>' +
+          '<button id="sip-live-gallery-file" class="sip-live-btn sip-live-secondary">Galeri/Folder</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="sip-live-body">' +
+        '<div class="sip-live-video-wrap">' +
+          '<video playsinline muted autoplay></video>' +
+          '<img id="sip-live-still" alt="Foto uji" hidden>' +
+          '<div class="sip-live-frame"></div>' +
+          '<div id="sip-live-status" class="sip-live-status">Kamera belum aktif.</div>' +
+        '</div>' +
+        '<div class="sip-live-result">' +
+          '<div class="sip-live-kicker">Prediksi saat ini</div>' +
+          '<div id="sip-live-label" class="sip-live-pred-label">-</div>' +
+          '<div id="sip-live-confidence" class="sip-live-confidence">Mulai kamera untuk melihat hasil.</div>' +
+          '<div id="sip-live-bars" class="sip-live-bars"></div>' +
+          '<div class="sip-live-note">Gunakan hasil live sebagai demo cepat. Untuk mencatat akurasi, tetap gunakan foto uji dan tandai benar/salah seperti biasa.</div>' +
+        '</div>' +
+      '</div>';
+    parent.insertBefore(card, grid);
+
+    var startBtn = card.querySelector('#sip-live-start');
+    if (startBtn) {
+      startBtn.addEventListener('click', function () { startLiveCamera(card); });
+    }
+    var cameraBtn = card.querySelector('#sip-live-camera-file');
+    if (cameraBtn) {
+      cameraBtn.addEventListener('click', function () { openMobileImagePicker('camera'); });
+    }
+    var galleryBtn = card.querySelector('#sip-live-gallery-file');
+    if (galleryBtn) {
+      galleryBtn.addEventListener('click', function () { openMobileImagePicker('gallery'); });
+    }
+  }
+
+  function installLiveTestObserver() {
+    var observer = new MutationObserver(function () { mountLiveTestCard(); });
+    observer.observe(document.getElementById('root') || document.body, { childList: true, subtree: true });
+    mountLiveTestCard();
+    window.addEventListener('pagehide', stopLiveCamera);
+  }
+
+  /* ────────────────────────────────────────────────
    * PATCH — window.SipML.train
    * Hanya untuk Feature 1 (timer) dan Feature 2 (akurasi).
    * Feature 3 sudah ditangani di click interceptor di atas.
@@ -411,6 +789,7 @@
 
   /* Click interceptor bisa dipasang segera (tidak butuh SipML) */
   installClickInterceptor();
+  installLiveTestObserver();
 
   /* SipML patch butuh polling karena bundle.js load async */
   if (document.readyState === 'loading') {

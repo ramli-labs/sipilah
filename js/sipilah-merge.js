@@ -708,6 +708,7 @@
       if (btn) btn.disabled = true;
       const imported = await importDataset();
       if (imported) {
+        sessionStorage.setItem("sip_return_to_dataset", "1");
         location.reload();
       } else {
         if (btn) btn.disabled = false;
@@ -715,8 +716,31 @@
     });
   }
 
+  function tryNavigateToDataset() {
+    if (!sessionStorage.getItem("sip_return_to_dataset")) return;
+    sessionStorage.removeItem("sip_return_to_dataset");
+
+    function clickDatasetNav() {
+      const allBtns = Array.from(document.querySelectorAll("nav button, nav a, [role='navigation'] button, aside button, aside a"));
+      const datasetBtn = allBtns.find((el) => {
+        const t = el.textContent || "";
+        return t.trim() === "Dataset" || t.includes("Dataset Sampah") || t.includes("Kumpulkan");
+      });
+      if (datasetBtn) { datasetBtn.click(); return true; }
+      return false;
+    }
+
+    if (!clickDatasetNav()) {
+      const nav = new MutationObserver(() => {
+        if (clickDatasetNav()) nav.disconnect();
+      });
+      nav.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
   function init() {
     injectStyles();
+    tryNavigateToDataset();
     const observer = new MutationObserver(() => mountDatasetImportBar());
     observer.observe(document.getElementById("root") || document.body, { childList: true, subtree: true });
     mountDatasetImportBar();

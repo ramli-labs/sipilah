@@ -722,14 +722,19 @@
   function refreshDatasetPage() {
     const datasetBtn = findNavBtn("Dataset");
     const berandaBtn = findNavBtn("Beranda");
-    if (berandaBtn && datasetBtn) {
-      // Klik Beranda lalu Dataset dalam satu frame — React update state dua kali
-      // sebelum browser sempat paint, sehingga Beranda tidak pernah terlihat.
-      berandaBtn.click();
-      requestAnimationFrame(() => datasetBtn.click());
-    } else if (datasetBtn) {
+    if (!datasetBtn) return;
+
+    // Pasang cover putih agar navigasi Beranda→Dataset tidak terlihat user
+    const cover = document.createElement("div");
+    cover.style.cssText = "position:fixed;inset:0;z-index:9999;background:#fff";
+    document.body.appendChild(cover);
+
+    if (berandaBtn) berandaBtn.click();
+
+    setTimeout(() => {
       datasetBtn.click();
-    }
+      setTimeout(() => cover.remove(), 120);
+    }, 80);
   }
 
   function init() {

@@ -711,11 +711,16 @@
   }
 
   function findNavBtn(label) {
+    const wanted = String(label || "").trim().toLowerCase();
     return Array.from(document.querySelectorAll("button")).find((el) => {
       // Sidebar collapsed: title attribute
-      if (el.getAttribute("title") === label) return true;
+      const title = (el.getAttribute("title") || "").trim().toLowerCase();
+      if (title === wanted || title.includes(wanted)) return true;
       // Sidebar expanded: label ada di dalam <span> (bukan langsung di button karena ada SVG icon)
-      return Array.from(el.querySelectorAll("span")).some((s) => s.textContent.trim() === label);
+      return Array.from(el.querySelectorAll("span")).some((s) => {
+        const text = s.textContent.trim().toLowerCase();
+        return text === wanted || text.includes(wanted);
+      });
     });
   }
 

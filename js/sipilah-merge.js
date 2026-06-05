@@ -700,15 +700,10 @@
           label.style.fontWeight = "700";
           label.textContent = `✓ ${totalBarImported} foto tersimpan${result.groups ? ` (${result.groups})` : ""}. Import kelompok lain atau klik Selesai.`;
         }
-        if (!document.getElementById("sip-dataset-done-btn")) {
-          const doneBtn = document.createElement("button");
-          doneBtn.id = "sip-dataset-done-btn";
-          doneBtn.style.cssText = "border:0;border-radius:12px;background:#0f172a;color:#fff;padding:10px 18px;font:800 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap";
-          doneBtn.textContent = "Selesai & Refresh Dataset";
-          doneBtn.addEventListener("click", refreshDatasetPage);
-          bar.appendChild(doneBtn);
-        }
         if (importBtn) { importBtn.disabled = false; importBtn.textContent = "+ Import Kelompok Lain"; }
+        // Auto-refresh: navigasi ke halaman lain lalu kembali ke Dataset
+        // agar React remount component dan fetch ulang data dari IndexedDB
+        setTimeout(refreshDatasetPage, 800);
       } else {
         if (importBtn) { importBtn.disabled = false; importBtn.textContent = "+ Import dari Kelompok Lain"; }
       }
@@ -717,22 +712,18 @@
 
   function findNavBtn(label) {
     return Array.from(document.querySelectorAll("button")).find((el) => {
-      return el.getAttribute("title") === label || (el.textContent || "").trim() === label;
+      // Sidebar collapsed: title attribute
+      if (el.getAttribute("title") === label) return true;
+      // Sidebar expanded: label ada di dalam <span> (bukan langsung di button karena ada SVG icon)
+      return Array.from(el.querySelectorAll("span")).some((s) => s.textContent.trim() === label);
     });
   }
 
   function refreshDatasetPage() {
-    // Navigasi ke halaman lain dulu agar React unmount Dataset component,
-    // lalu kembali ke Dataset agar remount dengan data terbaru dari IndexedDB.
     const datasetBtn = findNavBtn("Dataset");
     const berandaBtn = findNavBtn("Beranda");
-    if (!datasetBtn) return;
-    if (berandaBtn) {
-      berandaBtn.click();
-      setTimeout(() => datasetBtn.click(), 200);
-    } else {
-      datasetBtn.click();
-    }
+    if (berandaBtn) berandaBtn.click();
+    setTimeout(() => { if (datasetBtn) datasetBtn.click(); }, 250);
   }
 
   function init() {

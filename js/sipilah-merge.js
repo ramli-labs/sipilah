@@ -45,7 +45,7 @@
   }
 
   function normalizeContribution(source, photos) {
-    const identity = (source && source.identity) || {};
+    const identity = (source && source.identity) || (source && source.project && source.project.identity) || {};
     const exportedAt = (source && source.exportedAt) || new Date().toISOString();
     const key = [
       identity.school || "sekolah",
@@ -283,7 +283,9 @@
   }
 
   function validatePackage(data) {
-    if (!data || data.type !== "sipilah-dataset-package" || !Array.isArray(data.photos)) {
+    const isDatasetPackage = data && data.type === "sipilah-dataset-package" && Array.isArray(data.photos);
+    const isProjectSync = data && data.sipilah === "project-sync" && Array.isArray(data.photos);
+    if (!isDatasetPackage && !isProjectSync) {
       throw new Error("File bukan paket dataset SIPILAH.");
     }
 
@@ -333,7 +335,10 @@
 
       const totalPhotos = packages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
       const groupNames = packages
-        .map((pkg) => pkg.data.identity && (pkg.data.identity.group || pkg.data.identity.school))
+        .map((pkg) => {
+          const id = (pkg.data.identity) || (pkg.data.project && pkg.data.project.identity) || {};
+          return id.group || id.school || null;
+        })
         .filter(Boolean)
         .join(", ");
 

@@ -1,6 +1,7 @@
 (function () {
   const VERSION = 1;
   const VALID_CATEGORIES = new Set(["Plastik", "Kertas", "Organik", "Residu"]);
+  const IMPORTED_KEYS_STORAGE = "sipilah_imported_package_keys_v1";
 
   function readJSON(key, fallback) {
     try {
@@ -144,6 +145,22 @@
     writeJSON("sipilah_merge_contributions_v1", items);
   }
 
+  function readImportedKeys() {
+    const data = readJSON(IMPORTED_KEYS_STORAGE, []);
+    const keys = Array.isArray(data) ? data : [];
+    readContributions().forEach((item) => {
+      if (item && item.key) keys.push(item.key);
+    });
+    return new Set(keys.filter(Boolean));
+  }
+
+  function rememberImportedKey(key) {
+    if (!key) return;
+    const keys = readImportedKeys();
+    keys.add(key);
+    writeJSON(IMPORTED_KEYS_STORAGE, Array.from(keys).slice(-120));
+  }
+
   function countPhotos(photos) {
     const counts = { Plastik: 0, Kertas: 0, Organik: 0, Residu: 0 };
     photos.forEach((photo) => {
@@ -156,6 +173,17 @@
     return Object.values(counts || {}).reduce((sum, value) => sum + Number(value || 0), 0);
   }
 
+  function renderCountsSummary(counts) {
+    return `
+      <div class="sip-import-counts">
+        <span style="background:#0ea5e9">P ${counts.Plastik || counts.plastik || 0}</span>
+        <span style="background:#f59e0b">K ${counts.Kertas || counts.kertas || 0}</span>
+        <span style="background:#10b981">O ${counts.Organik || counts.organik || 0}</span>
+        <span style="background:#64748b">R ${counts.Residu || counts.residu || 0}</span>
+      </div>
+    `;
+  }
+
   function isImbalanced(counts) {
     const values = Object.values(counts || {}).map((value) => Number(value || 0));
     const active = values.filter((value) => value > 0);
@@ -163,6 +191,43 @@
     const max = Math.max(...active);
     const min = Math.min(...active);
     return max > 0 && min / max < 0.45;
+  }
+
+  function hashText(value) {
+    let hash = 5381;
+    const text = String(value || "");
+    for (let index = 0; index < text.length; index += 1) {
+      hash = ((hash << 5) + hash) ^ text.charCodeAt(index);
+    }
+    return (hash >>> 0).toString(36);
+  }
+
+  function getExportedAt(source) {
+    const data = source || {};
+    const project = data.project || {};
+    const meta = data.meta || data.metadata || {};
+    return firstText(data.exportedAt, data.createdAt, data.updatedAt, project.exportedAt, project.createdAt, meta.exportedAt, meta.createdAt);
+  }
+
+  function getPackageKey(source, photos) {
+    const identity = normalizeIdentity(source);
+    const exportedAt = getExportedAt(source);
+    const stablePart = exportedAt || hashText((photos || []).map((photo) => {
+      const dataUrl = String((photo && photo.dataUrl) || "");
+      return [
+        photo && photo.category,
+        photo && photo.ts,
+        dataUrl.length,
+        dataUrl.slice(0, 96),
+      ].join(":");
+    }).join("|"));
+
+    return [
+      identity.school || "sekolah",
+      identity.kelas || "kelas",
+      identity.group || "kelompok",
+      stablePart || "paket",
+    ].join("|");
   }
 
   function renderPackagePreview(packages) {
@@ -175,13 +240,16 @@
       const kelas = identity.kelas || "-";
       const source = pkg.fileName ? `<div class="sip-import-file">${escapeHTML(pkg.fileName)}</div>` : "";
 
+      const duplicateBadge = pkg.duplicate ? `<div class="sip-import-duplicate">Sudah pernah diimport</div>` : "";
+
       return `
-        <div class="sip-import-preview-item">
+        <div class="sip-import-preview-item${pkg.duplicate ? " duplicate" : ""}">
           <div class="sip-import-preview-top">
             <div>
               <div class="sip-import-group">${escapeHTML(name)}</div>
               <div class="sip-import-school">${escapeHTML(school)} · Kelas ${escapeHTML(kelas)}</div>
               ${source}
+              ${duplicateBadge}
             </div>
             <div class="sip-import-total">${total} foto</div>
           </div>
@@ -211,13 +279,8 @@
 
   function normalizeContribution(source, photos) {
     const identity = normalizeIdentity(source);
-    const exportedAt = (source && source.exportedAt) || new Date().toISOString();
-    const key = [
-      identity.school || "sekolah",
-      identity.kelas || "kelas",
-      identity.group || "kelompok",
-      exportedAt,
-    ].join("|");
+    const exportedAt = getExportedAt(source) || new Date().toISOString();
+    const key = getPackageKey(source, photos);
 
     return {
       key,
@@ -275,6 +338,24 @@
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 500);
+  }
+
+  async function getExportPayload() {
+    if (!window.SipDB) {
+      await notifyDialog("Database belum siap", "Muat ulang halaman lalu coba lagi.", { tone: "amber" });
+      return null;
+    }
+
+    const photos = await window.SipDB.getAll();
+    if (!photos.length) {
+      await notifyDialog("Dataset masih kosong", "Tambahkan foto dulu sebelum membuat file JSON.", { tone: "amber" });
+      return null;
+    }
+
+    const identity = normalizeIdentity({ identity: getIdentity() });
+    const counts = await window.SipDB.getCounts();
+
+    return { photos, identity, counts };
   }
 
   async function invalidateModel(counts) {
@@ -360,6 +441,7 @@
       "sipilah_project_v1",
       "sipilah_tests_v1",
       "sipilah_merge_contributions_v1",
+      IMPORTED_KEYS_STORAGE,
     ].forEach((key) => {
       try {
         localStorage.removeItem(key);
@@ -379,19 +461,25 @@
   }
 
   async function exportDataset() {
-    if (!window.SipDB) {
-      await notifyDialog("Database belum siap", "Muat ulang halaman lalu coba lagi.", { tone: "amber" });
-      return;
+    const payload = await getExportPayload();
+    if (!payload) return;
+
+    const { photos, identity, counts } = payload;
+    const missingIdentity = [
+      !identity.group && "nama kelompok",
+      !identity.school && "sekolah",
+      !identity.kelas && "kelas",
+    ].filter(Boolean);
+
+    if (missingIdentity.length) {
+      const ok = await confirmDialog(
+        "Identitas paket belum lengkap",
+        `Field ${missingIdentity.join(", ")} belum terisi. Paket tetap bisa diekspor, tapi guru/ketua mungkin sulit mengenali sumber dataset.\nLanjut ekspor sekarang?`,
+        { confirmText: "Tetap ekspor", cancelText: "Batal dulu", tone: "amber" }
+      );
+      if (!ok) return;
     }
 
-    const photos = await window.SipDB.getAll();
-    if (!photos.length) {
-      await notifyDialog("Dataset masih kosong", "Tambahkan foto dulu sebelum ekspor paket JSON.", { tone: "amber" });
-      return;
-    }
-
-    const identity = normalizeIdentity({ identity: getIdentity() });
-    const counts = await window.SipDB.getCounts();
     const packageData = {
       type: "sipilah-dataset-package",
       version: VERSION,
@@ -414,7 +502,90 @@
 
     const group = safeName(identity.group, "kelompok-sipilah");
     const kelas = safeName(identity.kelas, "kelas");
-    downloadJSON(`sipilah-dataset-${group}-${kelas}.json`, packageData);
+    const fileName = `sipilah-dataset-${group}-${kelas}.json`;
+    downloadJSON(fileName, packageData);
+
+    await notifyDialog(
+      "Paket dataset berhasil dibuat",
+      `File ${fileName} sudah diunduh.\nKirim file JSON ini ke ketua/guru untuk digabung ke dataset kelas.`,
+      {
+        confirmText: "Siap",
+        html: `
+          <div class="sip-export-summary">
+            <div class="sip-export-file">${escapeHTML(fileName)}</div>
+            <div class="sip-export-meta">${escapeHTML(identity.group || "Kelompok tanpa nama")} · ${escapeHTML(identity.school || "Sekolah belum diatur")} · Kelas ${escapeHTML(identity.kelas || "-")}</div>
+            <div class="sip-import-total">${photos.length} foto</div>
+            ${renderCountsSummary(counts)}
+          </div>
+        `,
+      }
+    );
+  }
+
+  async function exportClassBackup() {
+    const payload = await getExportPayload();
+    if (!payload) return;
+
+    const { photos, identity, counts } = payload;
+    const missingIdentity = [
+      !identity.school && "sekolah",
+      !identity.kelas && "kelas",
+    ].filter(Boolean);
+
+    if (missingIdentity.length) {
+      const ok = await confirmDialog(
+        "Identitas kelas belum lengkap",
+        `Field ${missingIdentity.join(", ")} belum terisi. Backup tetap bisa dibuat, tapi nama file dan arsipnya akan kurang rapi.\nLanjut buat backup?`,
+        { confirmText: "Tetap backup", cancelText: "Batal dulu", tone: "amber" }
+      );
+      if (!ok) return;
+    }
+
+    const backupIdentity = {
+      group: identity.group || "Dataset Gabungan Kelas",
+      school: identity.school,
+      kelas: identity.kelas,
+    };
+    const packageData = {
+      type: "sipilah-dataset-package",
+      version: VERSION,
+      exportedAt: new Date().toISOString(),
+      identity: backupIdentity,
+      metadata: {
+        group: backupIdentity.group,
+        school: backupIdentity.school,
+        kelas: backupIdentity.kelas,
+        backupType: "class-dataset",
+        source: "SIPILAH Backup Dataset Kelas",
+      },
+      counts,
+      photos: photos.map((photo) => ({
+        category: photo.category,
+        dataUrl: photo.dataUrl,
+        ts: photo.ts || Date.now(),
+      })),
+    };
+
+    const school = safeName(identity.school, "sekolah");
+    const kelas = safeName(identity.kelas, "kelas");
+    const fileName = `sipilah-dataset-kelas-${school}-${kelas}-gabungan.json`;
+    downloadJSON(fileName, packageData);
+
+    await notifyDialog(
+      "Backup dataset kelas dibuat",
+      `File ${fileName} sudah diunduh.\nFile ini berisi seluruh dataset gabungan di perangkat ini dan bisa dipakai untuk pindah perangkat atau demo ulang.`,
+      {
+        confirmText: "Siap",
+        html: `
+          <div class="sip-export-summary">
+            <div class="sip-export-file">${escapeHTML(fileName)}</div>
+            <div class="sip-export-meta">${escapeHTML(identity.school || "Sekolah belum diatur")} · Kelas ${escapeHTML(identity.kelas || "-")} · ${photos.length} foto gabungan</div>
+            <div class="sip-import-total">${photos.length} foto</div>
+            ${renderCountsSummary(counts)}
+          </div>
+        `,
+      }
+    );
   }
 
   function pickDatasetFiles() {
@@ -489,13 +660,18 @@
 
     const packages = [];
     const errors = [];
+    const importedKeys = readImportedKeys();
+    const selectedKeys = new Set();
 
     for (const file of files) {
       try {
         const text = await readFileText(file);
         const data = JSON.parse(text);
         const photos = validatePackage(data);
-        packages.push({ data, photos, fileName: file.name });
+        const key = getPackageKey(data, photos);
+        const duplicate = importedKeys.has(key) || selectedKeys.has(key);
+        selectedKeys.add(key);
+        packages.push({ data, photos, fileName: file.name, key, duplicate });
       } catch (error) {
         errors.push(`${file.name}: ${error && error.message ? error.message : "format tidak valid"}`);
       }
@@ -506,8 +682,20 @@
       if (!packages.length) return null;
     }
 
-    const totalPhotos = packages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
-    const groupNames = packages
+    const freshPackages = packages.filter((pkg) => !pkg.duplicate);
+    const duplicatePackages = packages.filter((pkg) => pkg.duplicate);
+
+    if (!freshPackages.length) {
+      await notifyDialog(
+        "Paket sudah pernah diimport",
+        "Semua file yang dipilih sudah tercatat di perangkat ini, jadi foto tidak ditambahkan lagi.",
+        { tone: "amber" }
+      );
+      return null;
+    }
+
+    const totalPhotos = freshPackages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
+    const groupNames = freshPackages
       .map((pkg) => {
         const id = normalizeIdentity(pkg.data);
         return id.group || id.school || null;
@@ -517,16 +705,17 @@
 
     const ok = await confirmDialog(
       "Preview paket dataset",
-      `SIPILAH akan menambahkan ${totalPhotos} foto ke dataset perangkat ini.\nCek ringkasannya dulu sebelum digabung.`,
+      `SIPILAH akan menambahkan ${totalPhotos} foto baru ke dataset perangkat ini.${duplicatePackages.length ? `\n${duplicatePackages.length} paket duplikat akan dilewati.` : ""}\nCek ringkasannya dulu sebelum digabung.`,
       { confirmText: "Gabungkan", cancelText: "Batal", html: renderPackagePreview(packages) }
     );
     if (!ok) return null;
 
-    for (const pkg of packages) {
+    for (const pkg of freshPackages) {
       for (const photo of pkg.photos) {
         await window.SipDB.savePhoto(photo.category, photo.dataUrl);
       }
       rememberImportedContribution(pkg.data, pkg.photos);
+      rememberImportedKey(pkg.key);
     }
 
     const counts = await window.SipDB.getCounts();
@@ -534,7 +723,7 @@
 
     const next = await showDialog({
       title: "Dataset berhasil digabung",
-      message: `${totalPhotos} foto berhasil ditambahkan${groupNames ? ` dari ${groupNames}` : ""}.\nModel lama sudah direset agar hasil prediksi memakai dataset gabungan terbaru.`,
+      message: `${totalPhotos} foto baru berhasil ditambahkan${groupNames ? ` dari ${groupNames}` : ""}.${duplicatePackages.length ? `\n${duplicatePackages.length} paket duplikat dilewati agar dataset tidak dobel.` : ""}\nModel lama sudah direset agar hasil prediksi memakai dataset gabungan terbaru.`,
       confirmText: "Latih ulang sekarang",
       secondaryText: "Nanti",
       tone: "green",
@@ -610,14 +799,19 @@
       .sip-dialog-body p:last-child{margin-bottom:0}
       .sip-import-preview{margin-top:14px;display:grid;gap:10px}
       .sip-import-preview-item{border:1px solid #e2e8f0;background:#fff;border-radius:18px;padding:12px}
+      .sip-import-preview-item.duplicate{border-color:#fed7aa;background:#fff7ed}
       .sip-import-preview-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
       .sip-import-group{font-weight:1000;color:#0f172a;line-height:1.2}
       .sip-import-school{margin-top:3px;color:#64748b;font-size:12px;font-weight:700}
       .sip-import-file{margin-top:4px;color:#94a3b8;font-size:11px;font-weight:800;word-break:break-word}
+      .sip-import-duplicate{display:inline-flex;margin-top:7px;border:1px solid #fdba74;background:#ffedd5;color:#9a3412;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:1000}
       .sip-import-total{flex-shrink:0;border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:1000;white-space:nowrap}
       .sip-import-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:10px}
       .sip-import-counts span{border-radius:9px;padding:6px 5px;color:#fff;font-size:11px;font-weight:1000;text-align:center}
       .sip-import-warning{border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:16px;padding:11px 12px;font-size:12px;font-weight:800;line-height:1.45}
+      .sip-export-summary{margin-top:14px;border:1px solid #bbf7d0;background:linear-gradient(135deg,#f0fdf4,#fff);border-radius:18px;padding:13px}
+      .sip-export-file{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:900;color:#166534;background:#fff;border:1px solid #dcfce7;border-radius:12px;padding:9px 10px;word-break:break-all}
+      .sip-export-meta{margin:10px 0;color:#475569;font-size:12px;font-weight:800;line-height:1.4}
       .sip-dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px;flex-wrap:wrap}
       .sip-dialog-btn{border:0;border-radius:15px;padding:12px 16px;font-size:14px;font-weight:900;cursor:pointer;transition:transform .15s ease,filter .15s ease,background .15s ease}
       .sip-dialog-btn:active{transform:translateY(1px)}
@@ -745,6 +939,7 @@
         </div>
         <div class="sip-merge-actions">
           <button type="button" class="sip-merge-btn secondary" data-sip-merge-export>Ekspor Paket</button>
+          <button type="button" class="sip-merge-btn secondary" data-sip-merge-backup>Backup Dataset Kelas</button>
           <button type="button" class="sip-merge-btn primary" data-sip-merge-import>Import & Gabungkan</button>
         </div>
       </div>
@@ -762,6 +957,9 @@
       if (target.matches("[data-sip-merge-export]")) {
         await exportDataset();
         refreshDashboardInCard(card);
+      }
+      if (target.matches("[data-sip-merge-backup]")) {
+        await exportClassBackup();
       }
       if (target.matches("[data-sip-merge-import]")) {
         const result = await importDataset();
@@ -799,6 +997,9 @@
       if (target.matches("[data-sip-merge-export]")) {
         await exportDataset();
         refresh();
+      }
+      if (target.matches("[data-sip-merge-backup]")) {
+        await exportClassBackup();
       }
       if (target.matches("[data-sip-merge-import]")) {
         const result = await importDataset();
@@ -840,6 +1041,7 @@
             "div",
             { className: "sip-merge-actions" },
             React.createElement("button", { type: "button", className: "sip-merge-btn secondary", "data-sip-merge-export": true }, "Ekspor Paket"),
+            React.createElement("button", { type: "button", className: "sip-merge-btn secondary", "data-sip-merge-backup": true }, "Backup Dataset Kelas"),
             React.createElement("button", { type: "button", className: "sip-merge-btn primary", "data-sip-merge-import": true }, "Import & Gabungkan")
           )
         ),
@@ -982,7 +1184,7 @@
     mountDatasetImportBar();
   }
 
-  window.SipMerge = { exportDataset, importDataset, reloadLatestVersion, resetProjectData, PageCollaboration };
+  window.SipMerge = { exportDataset, exportClassBackup, importDataset, reloadLatestVersion, resetProjectData, PageCollaboration };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

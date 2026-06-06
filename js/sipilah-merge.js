@@ -23,6 +23,37 @@
     return readJSON("sipilah_identity_v1", {});
   }
 
+  function firstText(...values) {
+    for (const value of values) {
+      const text = String(value || "").trim();
+      if (text) return text;
+    }
+    return "";
+  }
+
+  function normalizeIdentity(source) {
+    const data = source || {};
+    const project = data.project || {};
+    const meta = data.meta || data.metadata || {};
+    const identity = data.identity || project.identity || meta.identity || {};
+
+    return {
+      group: firstText(identity.group, identity.groupName, identity.kelompok, data.group, data.groupName, data.kelompok, meta.group, meta.groupName),
+      school: firstText(identity.school, identity.schoolName, identity.sekolah, data.school, data.schoolName, data.sekolah, meta.school, meta.schoolName),
+      kelas: firstText(identity.kelas, identity.class, identity.className, identity.classroom, data.kelas, data.class, data.className, meta.kelas, meta.className),
+    };
+  }
+
+  function escapeHTML(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[char]));
+  }
+
   function readContributions() {
     const data = readJSON("sipilah_merge_contributions_v1", []);
     return Array.isArray(data) ? data : [];
@@ -45,7 +76,7 @@
   }
 
   function normalizeContribution(source, photos) {
-    const identity = (source && source.identity) || (source && source.project && source.project.identity) || {};
+    const identity = normalizeIdentity(source);
     const exportedAt = (source && source.exportedAt) || new Date().toISOString();
     const key = [
       identity.school || "sekolah",
@@ -67,7 +98,7 @@
   }
 
   function rememberOwnContribution(photos, counts) {
-    const identity = getIdentity();
+    const identity = normalizeIdentity({ identity: getIdentity() });
     const own = normalizeContribution(
       { identity, exportedAt: new Date().toISOString() },
       photos.map((photo) => ({ category: photo.category }))
@@ -219,13 +250,18 @@
       return;
     }
 
-    const identity = getIdentity();
+    const identity = normalizeIdentity({ identity: getIdentity() });
     const counts = await window.SipDB.getCounts();
     const packageData = {
       type: "sipilah-dataset-package",
       version: VERSION,
       exportedAt: new Date().toISOString(),
       identity,
+      metadata: {
+        group: identity.group,
+        school: identity.school,
+        kelas: identity.kelas,
+      },
       counts,
       photos: photos.map((photo) => ({
         category: photo.category,
@@ -333,7 +369,7 @@
     const totalPhotos = packages.reduce((sum, pkg) => sum + pkg.photos.length, 0);
     const groupNames = packages
       .map((pkg) => {
-        const id = (pkg.data.identity) || (pkg.data.project && pkg.data.project.identity) || {};
+        const id = normalizeIdentity(pkg.data);
         return id.group || id.school || null;
       })
       .filter(Boolean)
@@ -471,8 +507,8 @@
           <tbody>
             ${contributions.map((item) => `
               <tr>
-                <td><div class="sip-merge-group">${item.group}</div><div class="sip-merge-muted">${new Date(item.importedAt || item.exportedAt).toLocaleDateString("id-ID")}</div></td>
-                <td>${item.school}<div class="sip-merge-muted">Kelas ${item.kelas}</div></td>
+                <td><div class="sip-merge-group">${escapeHTML(item.group)}</div><div class="sip-merge-muted">${new Date(item.importedAt || item.exportedAt).toLocaleDateString("id-ID")}</div></td>
+                <td>${escapeHTML(item.school)}<div class="sip-merge-muted">Kelas ${escapeHTML(item.kelas)}</div></td>
                 <td>
                   <div class="sip-merge-bars">
                     <div class="sip-merge-bar" style="background:#0ea5e9">P ${item.counts.Plastik || 0}</div>

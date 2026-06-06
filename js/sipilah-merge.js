@@ -54,6 +54,87 @@
     }[char]));
   }
 
+  function showDialog({
+    title,
+    message,
+    confirmText = "OK",
+    cancelText = "Batal",
+    secondaryText = "",
+    showCancel = false,
+    tone = "green",
+    html = "",
+  }) {
+    injectStyles();
+
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.className = "sip-dialog-backdrop";
+      overlay.setAttribute("role", "presentation");
+
+      const lines = String(message || "")
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const iconText = tone === "danger" ? "!" : tone === "amber" ? "i" : "✓";
+
+      overlay.innerHTML = `
+        <div class="sip-dialog" role="dialog" aria-modal="true" aria-labelledby="sip-dialog-title">
+          <div class="sip-dialog-head">
+            <div class="sip-dialog-icon ${tone}">${iconText}</div>
+            <div>
+              <div id="sip-dialog-title" class="sip-dialog-title">${escapeHTML(title)}</div>
+              <div class="sip-dialog-kicker">SIPILAH</div>
+            </div>
+          </div>
+          <div class="sip-dialog-body">
+            ${lines.map((line) => `<p>${escapeHTML(line)}</p>`).join("")}
+            ${html || ""}
+          </div>
+          <div class="sip-dialog-actions">
+            ${showCancel ? `<button type="button" class="sip-dialog-btn ghost" data-sip-dialog-cancel>${escapeHTML(cancelText)}</button>` : ""}
+            ${secondaryText ? `<button type="button" class="sip-dialog-btn ghost" data-sip-dialog-secondary>${escapeHTML(secondaryText)}</button>` : ""}
+            <button type="button" class="sip-dialog-btn ${tone === "danger" ? "danger" : "primary"}" data-sip-dialog-confirm>${escapeHTML(confirmText)}</button>
+          </div>
+        </div>
+      `;
+
+      let closed = false;
+      function close(value) {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener("keydown", onKeydown);
+        overlay.remove();
+        resolve(value);
+      }
+
+      function onKeydown(event) {
+        if (event.key === "Escape") close(false);
+      }
+
+      overlay.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (target.matches("[data-sip-dialog-confirm]")) close(true);
+        if (target.matches("[data-sip-dialog-secondary]")) close("secondary");
+        if (target.matches("[data-sip-dialog-cancel]")) close(false);
+        if (target === overlay && showCancel) close(false);
+      });
+
+      document.addEventListener("keydown", onKeydown);
+      document.body.appendChild(overlay);
+      const primary = overlay.querySelector("[data-sip-dialog-confirm]");
+      if (primary) primary.focus();
+    });
+  }
+
+  function confirmDialog(title, message, options = {}) {
+    return showDialog({ title, message, showCancel: true, ...options });
+  }
+
+  function notifyDialog(title, message, options = {}) {
+    return showDialog({ title, message, showCancel: false, ...options });
+  }
+
   function readContributions() {
     const data = readJSON("sipilah_merge_contributions_v1", []);
     return Array.isArray(data) ? data : [];
@@ -73,6 +154,59 @@
 
   function totalCounts(counts) {
     return Object.values(counts || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+  }
+
+  function isImbalanced(counts) {
+    const values = Object.values(counts || {}).map((value) => Number(value || 0));
+    const active = values.filter((value) => value > 0);
+    if (active.length < 2) return false;
+    const max = Math.max(...active);
+    const min = Math.min(...active);
+    return max > 0 && min / max < 0.45;
+  }
+
+  function renderPackagePreview(packages) {
+    const items = packages.map((pkg) => {
+      const identity = normalizeIdentity(pkg.data);
+      const counts = countPhotos(pkg.photos);
+      const total = totalCounts(counts);
+      const name = identity.group || "Kelompok tanpa nama";
+      const school = identity.school || "Sekolah belum diatur";
+      const kelas = identity.kelas || "-";
+      const source = pkg.fileName ? `<div class="sip-import-file">${escapeHTML(pkg.fileName)}</div>` : "";
+
+      return `
+        <div class="sip-import-preview-item">
+          <div class="sip-import-preview-top">
+            <div>
+              <div class="sip-import-group">${escapeHTML(name)}</div>
+              <div class="sip-import-school">${escapeHTML(school)} · Kelas ${escapeHTML(kelas)}</div>
+              ${source}
+            </div>
+            <div class="sip-import-total">${total} foto</div>
+          </div>
+          <div class="sip-import-counts">
+            <span style="background:#0ea5e9">P ${counts.Plastik || 0}</span>
+            <span style="background:#f59e0b">K ${counts.Kertas || 0}</span>
+            <span style="background:#10b981">O ${counts.Organik || 0}</span>
+            <span style="background:#64748b">R ${counts.Residu || 0}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    const totals = packages.reduce((acc, pkg) => {
+      const counts = countPhotos(pkg.photos);
+      Object.keys(acc).forEach((key) => {
+        acc[key] += Number(counts[key] || 0);
+      });
+      return acc;
+    }, { Plastik: 0, Kertas: 0, Organik: 0, Residu: 0 });
+    const warning = isImbalanced(totals)
+      ? `<div class="sip-import-warning">Distribusi kategori masih timpang. Setelah digabung, pertimbangkan menambah foto pada kategori yang paling sedikit.</div>`
+      : "";
+
+    return `<div class="sip-import-preview">${items}${warning}</div>`;
   }
 
   function normalizeContribution(source, photos) {
@@ -175,8 +309,10 @@
   }
 
   async function reloadLatestVersion() {
-    const ok = confirm(
-      "Muat ulang versi terbaru SIPILAH?\n\nCache aplikasi akan dibersihkan, tetapi dataset, hasil tes, dan model lokal tidak dihapus."
+    const ok = await confirmDialog(
+      "Muat ulang versi terbaru?",
+      "Cache aplikasi akan dibersihkan.\nDataset, hasil tes, dan model lokal tidak ikut dihapus.",
+      { confirmText: "Muat ulang", cancelText: "Nanti dulu", tone: "amber" }
     );
     if (!ok) return;
 
@@ -184,19 +320,23 @@
       await clearRuntimeCache();
       location.reload();
     } catch {
-      alert("Cache gagal dibersihkan otomatis. Halaman akan tetap dimuat ulang.");
+      await notifyDialog("Cache belum bersih", "Cache gagal dibersihkan otomatis. Halaman akan tetap dimuat ulang.", { tone: "amber" });
       location.reload();
     }
   }
 
   async function resetProjectData() {
-    const ok = confirm(
-      "Reset semua data proyek di perangkat ini?\n\nYang akan dihapus: dataset foto, model AI, hasil Pre/Post-Test, riwayat prediksi, laporan lokal, dan dashboard kontribusi.\n\nIdentitas siswa/kelompok tetap disimpan. Tindakan ini tidak bisa dibatalkan."
+    const ok = await confirmDialog(
+      "Reset data proyek?",
+      "Yang akan dihapus: dataset foto, model AI, hasil Pre/Post-Test, riwayat prediksi, laporan lokal, dan dashboard kontribusi.\nIdentitas siswa/kelompok tetap disimpan. Tindakan ini tidak bisa dibatalkan.",
+      { confirmText: "Lanjut reset", cancelText: "Batal", tone: "danger" }
     );
     if (!ok) return;
 
-    const doubleCheck = confirm(
-      "Konfirmasi terakhir: benar-benar hapus semua data proyek SIPILAH di perangkat ini?"
+    const doubleCheck = await confirmDialog(
+      "Konfirmasi terakhir",
+      "Benar-benar hapus semua data proyek SIPILAH di perangkat ini?",
+      { confirmText: "Ya, hapus", cancelText: "Batal", tone: "danger" }
     );
     if (!doubleCheck) return;
 
@@ -234,19 +374,19 @@
       // Reset data is more important than cache cleanup.
     }
 
-    alert("Data proyek di perangkat ini sudah direset. SIPILAH akan dimuat ulang.");
+    await notifyDialog("Data proyek direset", "SIPILAH akan dimuat ulang dengan data proyek kosong.", { confirmText: "Muat ulang" });
     location.reload();
   }
 
   async function exportDataset() {
     if (!window.SipDB) {
-      alert("Database SIPILAH belum siap. Muat ulang halaman lalu coba lagi.");
+      await notifyDialog("Database belum siap", "Muat ulang halaman lalu coba lagi.", { tone: "amber" });
       return;
     }
 
     const photos = await window.SipDB.getAll();
     if (!photos.length) {
-      alert("Dataset masih kosong. Tambahkan foto dulu sebelum ekspor.");
+      await notifyDialog("Dataset masih kosong", "Tambahkan foto dulu sebelum ekspor paket JSON.", { tone: "amber" });
       return;
     }
 
@@ -340,7 +480,7 @@
 
   async function importDataset() {
     if (!window.SipDB) {
-      alert("Database SIPILAH belum siap. Muat ulang halaman lalu coba lagi.");
+      await notifyDialog("Database belum siap", "Muat ulang halaman lalu coba lagi.", { tone: "amber" });
       return null;
     }
 
@@ -355,14 +495,14 @@
         const text = await readFileText(file);
         const data = JSON.parse(text);
         const photos = validatePackage(data);
-        packages.push({ data, photos });
+        packages.push({ data, photos, fileName: file.name });
       } catch (error) {
         errors.push(`${file.name}: ${error && error.message ? error.message : "format tidak valid"}`);
       }
     }
 
     if (errors.length) {
-      alert(`File tidak dapat dibaca:\n${errors.join("\n")}`);
+      await notifyDialog("File tidak dapat dibaca", errors.join("\n"), { tone: "amber" });
       if (!packages.length) return null;
     }
 
@@ -375,7 +515,11 @@
       .filter(Boolean)
       .join(", ");
 
-    const ok = confirm(`Gabungkan ${totalPhotos} foto${groupNames ? ` dari ${groupNames}` : ""}?`);
+    const ok = await confirmDialog(
+      "Preview paket dataset",
+      `SIPILAH akan menambahkan ${totalPhotos} foto ke dataset perangkat ini.\nCek ringkasannya dulu sebelum digabung.`,
+      { confirmText: "Gabungkan", cancelText: "Batal", html: renderPackagePreview(packages) }
+    );
     if (!ok) return null;
 
     for (const pkg of packages) {
@@ -388,7 +532,20 @@
     const counts = await window.SipDB.getCounts();
     await invalidateModel(counts);
 
-    return { count: totalPhotos, groups: groupNames };
+    const next = await showDialog({
+      title: "Dataset berhasil digabung",
+      message: `${totalPhotos} foto berhasil ditambahkan${groupNames ? ` dari ${groupNames}` : ""}.\nModel lama sudah direset agar hasil prediksi memakai dataset gabungan terbaru.`,
+      confirmText: "Latih ulang sekarang",
+      secondaryText: "Nanti",
+      tone: "green",
+    });
+
+    if (next === true) {
+      const trainBtn = findNavBtn("Latih Model");
+      if (trainBtn) trainBtn.click();
+    }
+
+    return { count: totalPhotos, groups: groupNames, trainNow: next === true };
   }
 
   function refreshDashboardInCard(card) {
@@ -439,7 +596,39 @@
       .sip-merge-panel{border:1px solid #e2e8f0;background:#fff;border-radius:20px;padding:16px}
       .sip-merge-panel-title{font-weight:900;color:#0f172a;margin-bottom:6px}
       .sip-merge-panel-text{font-size:13px;color:#64748b;line-height:1.55}
+      .sip-dialog-backdrop{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:18px;background:rgba(15,23,42,.58);backdrop-filter:blur(10px);animation:sipDialogFade .16s ease-out}
+      .sip-dialog{width:min(520px,100%);max-height:min(86vh,760px);overflow:auto;border:1px solid rgba(226,232,240,.95);border-radius:26px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 28px 80px -34px rgba(15,23,42,.75);padding:22px;animation:sipDialogPop .18s ease-out}
+      .sip-dialog-head{display:flex;gap:14px;align-items:center}
+      .sip-dialog-icon{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;font-weight:1000;color:#fff;box-shadow:0 14px 30px -18px currentColor}
+      .sip-dialog-icon.green{background:linear-gradient(135deg,#15803d,#10b981)}
+      .sip-dialog-icon.amber{background:linear-gradient(135deg,#f59e0b,#facc15);color:#422006}
+      .sip-dialog-icon.danger{background:linear-gradient(135deg,#dc2626,#fb7185)}
+      .sip-dialog-title{font-size:20px;font-weight:1000;color:#0f172a;line-height:1.15}
+      .sip-dialog-kicker{margin-top:3px;font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#15803d}
+      .sip-dialog-body{margin-top:18px;color:#475569;font-size:14px;line-height:1.6}
+      .sip-dialog-body p{margin:0 0 9px}
+      .sip-dialog-body p:last-child{margin-bottom:0}
+      .sip-import-preview{margin-top:14px;display:grid;gap:10px}
+      .sip-import-preview-item{border:1px solid #e2e8f0;background:#fff;border-radius:18px;padding:12px}
+      .sip-import-preview-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+      .sip-import-group{font-weight:1000;color:#0f172a;line-height:1.2}
+      .sip-import-school{margin-top:3px;color:#64748b;font-size:12px;font-weight:700}
+      .sip-import-file{margin-top:4px;color:#94a3b8;font-size:11px;font-weight:800;word-break:break-word}
+      .sip-import-total{flex-shrink:0;border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:1000;white-space:nowrap}
+      .sip-import-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:10px}
+      .sip-import-counts span{border-radius:9px;padding:6px 5px;color:#fff;font-size:11px;font-weight:1000;text-align:center}
+      .sip-import-warning{border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:16px;padding:11px 12px;font-size:12px;font-weight:800;line-height:1.45}
+      .sip-dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px;flex-wrap:wrap}
+      .sip-dialog-btn{border:0;border-radius:15px;padding:12px 16px;font-size:14px;font-weight:900;cursor:pointer;transition:transform .15s ease,filter .15s ease,background .15s ease}
+      .sip-dialog-btn:active{transform:translateY(1px)}
+      .sip-dialog-btn:focus-visible{outline:3px solid rgba(14,165,233,.28);outline-offset:2px}
+      .sip-dialog-btn.ghost{background:#eef2f7;color:#334155}
+      .sip-dialog-btn.primary{background:#15803d;color:#fff;box-shadow:0 14px 30px -18px #15803d}
+      .sip-dialog-btn.danger{background:#dc2626;color:#fff;box-shadow:0 14px 30px -18px #dc2626}
+      @keyframes sipDialogFade{from{opacity:0}to{opacity:1}}
+      @keyframes sipDialogPop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
       @media(max-width:720px){.sip-merge-flow{grid-template-columns:1fr}.sip-merge-actions{width:100%}.sip-merge-btn{flex:1}}
+      @media(max-width:520px){.sip-dialog{padding:18px;border-radius:24px}.sip-dialog-actions{display:grid;grid-template-columns:1fr}.sip-dialog-btn{width:100%}.sip-dialog-btn.primary,.sip-dialog-btn.danger{order:-1}.sip-import-preview-top{display:block}.sip-import-total{display:inline-flex;margin-top:8px}.sip-import-counts{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media(max-width:720px){.sip-merge-table th:nth-child(2),.sip-merge-table td:nth-child(2){display:none}.sip-merge-bars{grid-template-columns:repeat(2,minmax(0,1fr))}.sip-merge-grid{grid-template-columns:1fr}}
     `;
     document.head.appendChild(style);
@@ -581,7 +770,11 @@
       if (target.matches("[data-sip-reload-latest]")) reloadLatestVersion();
       if (target.matches("[data-sip-reset-project]")) resetProjectData();
       if (target.matches("[data-sip-merge-reset]")) {
-        if (confirm("Hapus riwayat kontribusi dashboard? Dataset foto tidak ikut terhapus.")) {
+        if (await confirmDialog(
+          "Reset riwayat kontribusi?",
+          "Dashboard kontribusi akan dikosongkan.\nDataset foto yang sudah digabung tidak ikut terhapus.",
+          { confirmText: "Reset riwayat", cancelText: "Batal", tone: "danger" }
+        )) {
           writeContributions([]);
           refreshDashboardInCard(card);
         }
@@ -612,7 +805,11 @@
         if (result) refresh();
       }
       if (target.matches("[data-sip-merge-reset]")) {
-        if (confirm("Hapus riwayat kontribusi dashboard? Dataset foto tidak ikut terhapus.")) {
+        if (await confirmDialog(
+          "Reset riwayat kontribusi?",
+          "Dashboard kontribusi akan dikosongkan.\nDataset foto yang sudah digabung tidak ikut terhapus.",
+          { confirmText: "Reset riwayat", cancelText: "Batal", tone: "danger" }
+        )) {
           writeContributions([]);
           refresh();
         }
@@ -739,7 +936,7 @@
         if (importBtn) { importBtn.disabled = false; importBtn.textContent = "+ Import Kelompok Lain"; }
         // Auto-refresh: navigasi ke halaman lain lalu kembali ke Dataset
         // agar React remount component dan fetch ulang data dari IndexedDB
-        setTimeout(refreshDatasetPage, 800);
+        if (!result.trainNow) setTimeout(refreshDatasetPage, 800);
       } else {
         if (importBtn) { importBtn.disabled = false; importBtn.textContent = "+ Import dari Kelompok Lain"; }
       }

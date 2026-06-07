@@ -20,6 +20,17 @@
     }
   }
 
+  function logProjectEvent(type, title, detail) {
+    if (typeof window.SipProjectLog === "function") {
+      window.SipProjectLog(type, title, detail);
+      return;
+    }
+    const key = "sipilah_project_log_v1";
+    const current = readJSON(key, []);
+    const list = Array.isArray(current) ? current : [];
+    writeJSON(key, [{ type, title, detail, ts: Date.now() }, ...list].slice(0, 60));
+  }
+
   function getIdentity() {
     return readJSON("sipilah_identity_v1", {});
   }
@@ -439,6 +450,7 @@
 
     [
       "sipilah_project_v1",
+      "sipilah_project_log_v1",
       "sipilah_tests_v1",
       "sipilah_merge_contributions_v1",
       IMPORTED_KEYS_STORAGE,
@@ -504,6 +516,7 @@
     const kelas = safeName(identity.kelas, "kelas");
     const fileName = `sipilah-dataset-${group}-${kelas}.json`;
     downloadJSON(fileName, packageData);
+    logProjectEvent("export", "Paket dataset diekspor", `${photos.length} foto disiapkan untuk dibagikan ke perangkat pusat.`);
 
     await notifyDialog(
       "Paket dataset berhasil dibuat",
@@ -570,6 +583,7 @@
     const kelas = safeName(identity.kelas, "kelas");
     const fileName = `sipilah-dataset-kelas-${school}-${kelas}-gabungan.json`;
     downloadJSON(fileName, packageData);
+    logProjectEvent("export", "Backup dataset kelas dibuat", `${photos.length} foto gabungan disimpan sebagai file backup.`);
 
     await notifyDialog(
       "Backup dataset kelas dibuat",
@@ -710,13 +724,20 @@
     );
     if (!ok) return null;
 
-    for (const pkg of freshPackages) {
-      for (const photo of pkg.photos) {
-        await window.SipDB.savePhoto(photo.category, photo.dataUrl);
+    const previousMute = window.SipProjectLogMuted;
+    window.SipProjectLogMuted = true;
+    try {
+      for (const pkg of freshPackages) {
+        for (const photo of pkg.photos) {
+          await window.SipDB.savePhoto(photo.category, photo.dataUrl);
+        }
+        rememberImportedContribution(pkg.data, pkg.photos);
+        rememberImportedKey(pkg.key);
       }
-      rememberImportedContribution(pkg.data, pkg.photos);
-      rememberImportedKey(pkg.key);
+    } finally {
+      window.SipProjectLogMuted = previousMute;
     }
+    logProjectEvent("import", "Dataset kelompok digabung", `${totalPhotos} foto baru ditambahkan${groupNames ? ` dari ${groupNames}` : ""}.`);
 
     const counts = await window.SipDB.getCounts();
     await invalidateModel(counts);

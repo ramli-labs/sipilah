@@ -1,5 +1,6 @@
 # Output & artifacts
 screenshots/
+recordings/
 node_modules/
 
 # Script kerja (tidak perlu masuk repo)

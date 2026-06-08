@@ -921,12 +921,17 @@
 
   function isProjectLogPageVisible() {
     var text = document.body ? document.body.innerText || '' : '';
-    return text.indexOf('Laporan Proyek') >= 0 && text.indexOf('SIPILAH') >= 0;
+    var hasReportTitle = Array.from(document.querySelectorAll('h1, h2, h3')).some(function (el) {
+      var title = (el.textContent || '').trim();
+      return title === 'Laporan Proyek' || title === 'Laporan Proyek Otomatis';
+    });
+    return hasReportTitle && text.indexOf('SIPILAH') >= 0;
   }
 
   function findProjectLogHost() {
-    var title = Array.from(document.querySelectorAll('h1, h2, h3, div')).find(function (el) {
-      return (el.textContent || '').trim() === 'Laporan Proyek';
+    var title = Array.from(document.querySelectorAll('h1, h2, h3')).find(function (el) {
+      var text = (el.textContent || '').trim();
+      return text === 'Laporan Proyek' || text === 'Laporan Proyek Otomatis';
     });
     if (title) return title.closest('.space-y-6, main, [class*="space-y"]') || title.parentElement;
     var main = document.querySelector('main');
@@ -934,8 +939,21 @@
   }
 
   function insertReportEnhancementCard(host, card) {
-    host.insertBefore(card, host.firstElementChild && host.firstElementChild.nextSibling ? host.firstElementChild.nextSibling : host.firstChild);
+    host.insertBefore(card, getReportEnhancementAnchor(host));
     orderReportEnhancementCards(host);
+  }
+
+  function getReportEnhancementAnchor(host) {
+    if (!host) return null;
+    var ids = [
+      'sip-presentation-check-card',
+      'sip-action-recommend-card',
+      'sip-project-log-card',
+    ];
+    var children = Array.from(host.children);
+    return children.find(function (el, index) {
+      return index > 0 && ids.indexOf(el.id) < 0;
+    }) || null;
   }
 
   function orderReportEnhancementCards(host) {
@@ -945,8 +963,18 @@
       'sip-action-recommend-card',
       'sip-project-log-card',
     ];
-    var anchor = host.firstElementChild && host.firstElementChild.nextSibling ? host.firstElementChild.nextSibling : host.firstChild;
-    ids.slice().reverse().forEach(function (id) {
+    var present = ids
+      .map(function (id) { return document.getElementById(id); })
+      .filter(function (el) { return el && el.parentElement === host; });
+    var current = Array.from(host.children)
+      .filter(function (el) { return ids.indexOf(el.id) >= 0; })
+      .map(function (el) { return el.id; })
+      .join('|');
+    var desired = present.map(function (el) { return el.id; }).join('|');
+    if (current === desired) return;
+
+    var anchor = getReportEnhancementAnchor(host);
+    ids.forEach(function (id) {
       var el = document.getElementById(id);
       if (el && el.parentElement === host) {
         host.insertBefore(el, anchor);
@@ -1090,8 +1118,9 @@
   }
 
   function findReportHost() {
-    var title = Array.from(document.querySelectorAll('h1, h2, h3, div')).find(function (el) {
-      return (el.textContent || '').trim() === 'Laporan Proyek';
+    var title = Array.from(document.querySelectorAll('h1, h2, h3')).find(function (el) {
+      var text = (el.textContent || '').trim();
+      return text === 'Laporan Proyek' || text === 'Laporan Proyek Otomatis';
     });
     if (title) return title.closest('.space-y-6, main, [class*="space-y"]') || title.parentElement;
     var main = document.querySelector('main');
@@ -1162,11 +1191,11 @@
 
   function isPresentationCheckPageVisible() {
     var text = document.body ? document.body.innerText || '' : '';
-    return (
-      text.indexOf('Laporan Proyek') >= 0 ||
-      text.indexOf('Mode Presentasi Lomba') >= 0 ||
-      text.indexOf('PROYEK AKTIF') >= 0
-    ) && text.indexOf('SIPILAH') >= 0;
+    var visibleTitle = Array.from(document.querySelectorAll('h1, h2, h3')).some(function (el) {
+      var title = (el.textContent || '').trim();
+      return title === 'Laporan Proyek' || title === 'Laporan Proyek Otomatis' || title === 'Mode Presentasi Lomba';
+    });
+    return visibleTitle && text.indexOf('SIPILAH') >= 0;
   }
 
   function getPresentationChecklistMetrics(counts) {
@@ -1232,10 +1261,11 @@
   function findPresentationCheckHost() {
     var exactTitles = [
       'Laporan Proyek',
+      'Laporan Proyek Otomatis',
       'Proyek Pilah Sampah',
       'Belajar Kecerdasan Artifisial melalui aksi pilah sampah',
     ];
-    var title = Array.from(document.querySelectorAll('h1, h2, h3, div')).find(function (el) {
+    var title = Array.from(document.querySelectorAll('h1, h2, h3')).find(function (el) {
       var text = (el.textContent || '').trim();
       return exactTitles.indexOf(text) >= 0;
     });

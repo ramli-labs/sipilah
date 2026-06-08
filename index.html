@@ -86,7 +86,7 @@
   <!-- App bundle (React + TF.js + MobileNet loader + app, semua minified) -->
   <script src="js/sipilah-merge.js?v=project-log-20260607" defer></script>
   <script src="js/bundle.js?v=mobile-camera-fix-20260605" defer></script>
-  <script src="js/sipilah-enhancements.js?v=report-polish-20260607" defer></script>
+  <script src="js/sipilah-enhancements.js?v=report-polish-stable-20260608" defer></script>
   <script src="js/sipilah-3t-map.js?v=audit-real-20260517" defer></script>
   <script src="js/sipilah-showcase.js?v=audit-real-20260517" defer></script>
   <script src="js/sipilah-branding.js?v=audit-real-20260517" defer></script>
@@ -96,7 +96,7 @@
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js?v=audit-real-20260517').then(
-          (reg) => console.log('[SW] Terdaftar:', reg.scope),
+          (reg) => console.log('[SW] Terdaftar:', reg && reg.scope ? reg.scope : 'aktif'),
           (err) => console.warn('[SW] Gagal daftar:', err)
         );
       });
